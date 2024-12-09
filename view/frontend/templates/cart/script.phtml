@@ -1,0 +1,39 @@
+<?php
+/**
+ * ViraXpress - https://www.viraxpress.com
+ *
+ * LICENSE AGREEMENT
+ *
+ * This file is part of the ViraXpress package and is licensed under the ViraXpress license agreement.
+ * You can view the full license at:
+ * https://www.viraxpress.com/license
+ *
+ * By utilizing this file, you agree to comply with the terms outlined in the ViraXpress license.
+ *
+ * DISCLAIMER
+ *
+ * Modifications to this file are discouraged to ensure seamless upgrades and compatibility with future releases.
+ *
+ * @category    ViraXpress
+ * @package     ViraXpress_CheckoutOptimization
+ * @author      ViraXpress
+ * @copyright   © 2024 ViraXpress (https://www.viraxpress.com/)
+ * @license     https://www.viraxpress.com/license
+ */
+?>
+<script defer>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('[data-action="checkout-form-submit"]').forEach(function(element) {
+            element.addEventListener('click', function(event) {
+                event.preventDefault();
+                var clickedElement = event.currentTarget;
+                var returnUrl = clickedElement.getAttribute('data-checkout-url');
+                if (form = clickedElement.closest('form')) {
+                    if (button = document.querySelector('.box-to-cart > .block > button[type="button"]')) button.click()
+                }
+                // Redirect the user to the checkout URL
+                window.location.href = returnUrl;
+            });
+        });
+    });
+</script>

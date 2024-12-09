@@ -1,0 +1,984 @@
+<?php
+/**
+ * ViraXpress - https://www.viraxpress.com
+ *
+ * LICENSE AGREEMENT
+ *
+ * This file is part of the ViraXpress package and is licensed under the ViraXpress license agreement.
+ * You can view the full license at:
+ * https://www.viraxpress.com/license
+ *
+ * By utilizing this file, you agree to comply with the terms outlined in the ViraXpress license.
+ *
+ * DISCLAIMER
+ *
+ * Modifications to this file are discouraged to ensure seamless upgrades and compatibility with future releases.
+ *
+ * @category    ViraXpress
+ * @package     ViraXpress_CheckoutOptimization
+ * @author      ViraXpress
+ * @copyright   © 2024 ViraXpress (https://www.viraxpress.com/)
+ * @license     https://www.viraxpress.com/license
+ */
+use Magento\Framework\Escaper;
+/**
+ * @var Escaper $escaper
+ * @var \Magento\Framework\View\Element\BlockInterface $block
+ */
+$viewModel = $block->getData('viewModel');
+$addressFormFields = $viewModel->getAddressAttributes();
+$addressFormFields['postcode']['required'] = "1";
+$addressFormFields['postcode']['validation']['required-entry'] = true;
+$addressFormFields['region_id']['required'] = "1";
+$addressFormFields['region_id']['validation']['required-entry'] = true;
+?>
+<script>
+    function checkout() {
+        return {
+            loading: false,
+            discountCode: false,
+            step: 'shipping',
+            guest: false,
+            selectedAddressId: null,
+            selectedShippingMethod: null,
+            selectedShippingTitle: null,
+            isAddressSameAsShipping: false,
+            isRegionAvailable: false,
+            shippingMethods: [],
+            message: 'Required field.',
+            regionArray: [],
+            config: window.checkoutConfig,
+            storeCode: '<?= $escaper->escapeHtmlAttr($viewModel->getCurrentStoreCode()) ?>',
+            defaultAddress: {
+                country_id: window.checkoutConfig.defaultCountryId,
+                region_id: window.checkoutConfig.defaultRegionId,
+                postcode: window.checkoutConfig.defaultPostcode,
+            },
+            isShipModalOpen: false,
+            addressFormFields: <?= /* @noEscape */ json_encode($addressFormFields) ?>,
+            addressStreetArray: [],
+            selectedBillingAddressId: null,
+            defBillAdr: [],
+            selectedPaymentMethod: '',
+            paymentMethods: [],
+            couponCode: null,
+            checkShipAddress: false,
+            errors: {},
+            payPalConf: window.checkoutConfig.payment.paypalExpress,
+            guestShipAddr: null,
+            guestShip: {
+                country_id: window.checkoutConfig.defaultCountryId
+            },
+            addr: {},
+            isBillingFormOpen: false,
+            showDetails: false,
+            getPrefillShipAddr:false,
+            init() {
+                this.guest = this.config.customerData.length === 0;
+                this.generateAddressStreetArray();
+                if (!this.guest) this.$watch('selectedAddressId', (value) => { if (value) this.fetchShippingMethods(value);});
+                this.selectedAddressId = this.config.customerData.default_shipping;
+                this.selectedShippingMethod = (this.config.selectedShippingMethod != null) ? this.config.selectedShippingMethod.carrier_code + '_' + this.config.selectedShippingMethod.method_code : null;
+                this.selectedShippingTitle = (this.config.selectedShippingMethod != null) ? this.config.selectedShippingMethod.carrier_title + ' - ' + this.config.selectedShippingMethod.method_title : null;
+                this.$watch('isShipModalOpen', (value) => { if (value) this.onCountryChange('country');});
+                if (this.selectedAddressId == null) this.loadShippingMethod();
+                this.defBillAdr = (this.config.customerData.default_billing) ? this.config.customerData.addresses[this.config.customerData.default_billing] : [];
+                this.selectedBillingAddressId = (this.config.customerData.default_billing) ? this.config.customerData.default_billing : null;
+                this.$watch('selectedBillingAddressId', (value) => { if (value) this.onCountryChange(this.guest ? 'bill-guest-country':'country');});
+                this.$watch('selectedPaymentMethod', (value) => { if (value) this.updatePaymentMethod(value) });
+                this.$watch('isAddressSameAsShipping', (value) => { this.toggleBillingFormVisibility(value) });
+                this.$watch('isBillingFormOpen', (value) => { if (value) this.onCountryChange('bill-guest-country');});
+                if (this.guest) var inter = setInterval(() => { clearInterval(inter); this.onCountryChange('ship-guest-country'); this.fetchPreShippingMethods(this.guestShip);}, 1000);
+                if (this.config.quoteData.is_virtual) {
+                    if (this.config.customerData && this.config.customerData.default_billing) {
+                        this.fetchShippingMethods(this.config.customerData.default_billing)
+                    } else {
+                        this.isBillingFormOpen = true;
+                        this.selectedBillingAddressId = 0;
+                        this.fetchPreShippingMethods(this.defaultAddress);
+                    }
+                    this.fetchPaymentInformation()
+                }
+                window.addEventListener('set-step', (event) => {this.step = event.detail;});
+                if (!this.guest) this.loadAddressFormData();
+                if (this.guest) this.getPrefillShipAddr = this.getPrefillShipAddr();
+            },
+            checkIsVirtualForEmail() {
+                var valid = true;
+                if (this.step == 'payment') {
+                    valid = this.config.quoteData.is_virtual
+                }
+                return valid;
+            },
+            generateAddressStreetArray() {
+                this.addressStreetArray = Array.from({ length: this.addressFormFields['street'].size }, (_, i) => i + 1);
+            },
+            /* Set shipping method title */
+            setSelectedShippingTitle(method) {
+                if (method.carrier_code + '_' + method.method_code === this.selectedShippingMethod) {
+                    this.selectedShippingTitle = method.carrier_title + ' - ' + method.method_title;
+                }
+            },
+            /* Get customer token */
+            getCustomerToken() {
+                return '<?= $escaper->escapeHtmlAttr($viewModel->getCustomerToken()) ?>';
+            },
+            /* Headers based on customer */
+            buildHeaders(isGuest) {
+                const headers = { 'Content-Type': 'application/json' };
+                if (!isGuest) headers['Authorization'] = `Bearer ${this.getCustomerToken()}`;
+                return headers;
+            },
+            /* Update Payment Method on change */
+            async updatePaymentMethod(method) {
+                if (this.guest) {
+                    this.onCountryChange('bill-guest-country');
+                    const errorElement = document.getElementById("customer-email-error");
+                    if (errorElement && errorElement.textContent.trim() !== "") {
+                        this.selectedPaymentMethod = '';
+                        this.loading = false;
+                        errorElement.scrollIntoView({ behavior: "smooth", block: "center" });
+                        errorElement.focus();
+                        return;
+                    }
+                }
+                this.setPaymentInformation(method);
+                this.getTotals();
+                if (paypalIframe = document.querySelector('.paypal-buttons-context-iframe')) paypalIframe.innerHTML = '';
+                if (this.payPalConf.isContextCheckout) this.inContextXpress();
+            },
+            /* Global Warning Msg Display */
+            displayWarning(message, targetElementId, warningId, child = true, autoDismiss = true) {
+                const existingWarning = document.getElementById(warningId);
+                if (existingWarning) existingWarning.remove();
+                const warningDiv = document.createElement('div');
+                warningDiv.textContent = message;
+                warningDiv.id = warningId;
+                warningDiv.classList.add('text-sm', 'text-error', 'mt-2');
+                const targetElement = document.querySelector(targetElementId);
+                (child) ? targetElement.parentNode.insertBefore(warningDiv, targetElement) : targetElement.appendChild(warningDiv);
+                if (autoDismiss) setTimeout(() => warningDiv.remove(), 5000);
+            },
+            /* Billing form visibility when user clicked isBillingSameAsShipping */
+            toggleBillingFormVisibility(value) {
+                if (value) {
+                    if (this.guest) this.isBillingFormOpen = false;
+                    (!this.guest) ? this.isBillingSameAsShipping(this.selectedAddressId) : this.defBillAdr = this.guestShipAddr;
+                } else {
+                    this.isBillingFormOpen = true;
+                    this.selectedBillingAddressId = this.guest ? 0 : null;
+                }
+            },
+            /* Load country to check region is available */
+            onCountryChange(id) {
+                this.checkShipAddress = (Object.keys(window.checkoutConfig.customerData).length > 0 && window.checkoutConfig.customerData.addresses['newship']) ? true : false;
+                /* this.defBillAdr = Object.keys(window.checkoutConfig.customerData).length > 0 && window.checkoutConfig.customerData.addresses; */
+                var countryId = document.getElementById(id);
+                if (countryId) {
+                    var url = "<?= $escaper->escapeUrl($block->getBaseUrl()) ?>checkoutoptimization/address/state";
+                    fetch(url+ '?event_country=' + encodeURIComponent(countryId.value))
+                    .then((response) => { if (response.ok) return response.json();})
+                    .then((data) => { 
+                        if (data && Object.keys(data).length > 0) {
+                            document.querySelectorAll(".address-form-fields.region-field").forEach(element => {element.style.display = "none";});
+                            document.querySelectorAll(".address-form-fields.region_id-field").forEach(element => {element.style.display = "block";});
+                            this.isRegionAvailable = true;
+                        } else {
+                            document.querySelectorAll(".address-form-fields.region-field").forEach(element => {element.style.display = "block";});
+                            document.querySelectorAll(".address-form-fields.region_id-field").forEach(element => {element.style.display = "none";});
+                            this.isRegionAvailable = false;
+                        }
+                        this.regionArray = data;
+                    }).catch((error) => { console.error("Fetch error:", error); });
+                }
+            },
+            /* Get customer address exists or not */
+            get hasCustomerAddresses() {
+                return this.config.customerData.addresses && Object.keys(this.config.customerData.addresses).length > 0;
+            },
+            /* Get new shipping addr from add new address */
+            get hasNewshipAddress() {
+                return this.config.customerData.addresses && this.config.customerData.addresses.hasOwnProperty('newship');
+            },
+            /* Load default shipping method */
+            loadShippingMethod(){
+                if (this.config.customerData && this.config.customerData.addresses) {
+                    for (const addressKey in this.config.customerData.addresses) {
+                        const address = this.config.customerData.addresses[addressKey];
+                        if (address['default_shipping'] == true) this.fetchPreShippingMethods(address)
+                    }
+                }
+            },
+            /* Load shippingAddressFromData from storage */
+            loadAddressFormData() {
+                let e = localStorage.getItem('vira-mage-cache-storage');
+                if (e) {
+                    try {
+                        const checkoutData = JSON.parse(e); // Parse the JSON string
+                        if (Object.keys(checkoutData).length > 0) {
+                            if (checkoutData['checkout-data'] && 
+                                checkoutData['checkout-data']['shippingAddressFromData'] && 
+                                checkoutData['checkout-data']['shippingAddressFromData']['firstname']
+                            ) {
+                                var existingAddresses = this.config.customerData.addresses;
+                                checkoutData['checkout-data']['shippingAddressFromData']['id'] = "newship";
+                                existingAddresses['newship'] = checkoutData['checkout-data']['shippingAddressFromData'];
+                            } else {
+                                if (Object.keys(window.checkoutConfig.customerData).length > 0) delete this.config.customerData.addresses['newship'];
+                            }
+                        } else {
+                            if (Object.keys(window.checkoutConfig.customerData).length > 0) delete this.config.customerData.addresses['newship'];
+                        }
+                    } catch (error) {
+                        console.error("Error parsing 'vira-mage-cache-storage':", error);
+                    }
+                } else {
+                    if (Object.keys(window.checkoutConfig.customerData).length > 0) delete this.config.customerData.addresses['newship'];
+                }
+            },
+            /* Set selected ShippingMethod */
+            selectShippingMethod(methodCode) {
+                this.selectedShippingMethod = methodCode;
+            },
+            /* Get cart total price */
+            getCartItemTotalPrice(price) {
+                const storeLocale = '<?= /* @noEscape */ $viewModel->getStoreLocale() ?>'.replace("_", "-");
+                const currentCurrencyCode = '<?= /* @noEscape */ $viewModel->getCurrentCurrencyCode() ?>';
+                return new Intl.NumberFormat(storeLocale, {style: 'currency',currency: currentCurrencyCode,}).format(price);
+            },
+            /* Fetch shipping method by selected address id */
+            fetchShippingMethods(addressId) {
+                const regex = /\d/;
+                if (!regex.test(addressId)) {
+                    var address = this.config.customerData.addresses[addressId];
+                    this.selectedAddressId = address['id'];
+                    delete address['id'];
+                    const checkAddressBook = address['save_in_address_book'];
+                    if (address['save_in_address_book']) address['save_in_address_book'] = 0;
+                    this.fetchPreShippingMethods(address)
+                    if (checkAddressBook) address['save_in_address_book'] = checkAddressBook;
+                    address['id'] = addressId;
+                    return;
+                }
+                const url = `/rest/${this.storeCode}/V1/carts/mine/estimate-shipping-methods-by-address-id`;
+                const requestBody = JSON.stringify({ addressId: addressId });
+                fetch(url, {method: 'POST', headers: this.buildHeaders(this.guest), body: requestBody})
+                .then(response => response.json())
+                .then(data => { this.shippingMethods = data;})
+                .catch(error => { console.error('Error fetching shipping methods:', error);});
+            },
+            /* Fetch shipping method by default address */
+            fetchPreShippingMethods(address) {
+                var url = `/rest/${this.storeCode}/V1/guest-carts/${this.config.quoteData.entity_id}/estimate-shipping-methods`;
+                if (!this.guest) {
+                    address['region'] = (address['region']['region']) ? address['region']['region'] : address['region'];
+                    url = `/rest/${this.storeCode}/V1/carts/mine/estimate-shipping-methods`;
+                }
+                const requestBody = JSON.stringify({ address: address });
+                this.loading = false;
+                fetch(url, { method: 'POST', headers: this.buildHeaders(this.guest), body: requestBody })
+                .then(response => response.json())
+                .then(data => {
+                    if (!this.guest) this.setcheckoutLocalStorage(address)
+                    this.isShipModalOpen = false;
+                    this.shippingMethods = data;
+                }).catch(error => { console.error('Error fetching shipping methods:', error);});
+            },
+            /* Set new shipping address in storage */
+            setcheckoutLocalStorage (address) {
+                let checkoutData = {};
+                const storageData = localStorage.getItem('vira-mage-cache-storage');
+                if (storageData) checkoutData = JSON.parse(storageData);
+                checkoutData['checkout-data'] = checkoutData['checkout-data'] || {};
+                checkoutData['checkout-data']['selectedShippingRate'] = this.selectedShippingMethod;
+                checkoutData['checkout-data']['shippingAddressFromData'] = address;
+                localStorage.setItem('vira-mage-cache-storage', JSON.stringify(checkoutData));
+                checkoutData['checkout-data']['shippingAddressFromData']['id'] = "newship";
+                if (!this.guest) {
+                    var existingAddresses = this.config.customerData.addresses;
+                    existingAddresses['newship'] = checkoutData['checkout-data']['shippingAddressFromData'];
+                }
+                this.selectedAddressId = "newship";
+            },
+            /* Is billing same as shipping */
+            async isBillingSameAsShipping(id) {
+                const formData = {};
+                if (id == 0) {
+                    const form = document.getElementById('co-billing-form');
+                    let valid = true;
+                    this.errors = {};
+                    const elements = form.elements;
+                    for (let element of elements) {
+                        const validation = JSON.parse(element.getAttribute('data-validate') || '{}');
+                        if (validation['required-entry']) {
+                            if (validation['required-entry'] && !element.value.trim()) {
+                                valid = false;
+                                this.errors[element.name] = this.message;
+                            } else if (validation['max_text_length'] && element.value.length > validation['max_text_length']) {
+                                valid = false;
+                                this.errors[element.name] = 'Text is too long';
+                            } else if (validation['min_text_length'] && element.value.length < validation['min_text_length']) {
+                                valid = false;
+                                this.errors[element.name] = 'Text is too short';
+                            }
+                        }
+                    }
+                    const billingFormData = {};
+                    let street = [];
+                    for (let element of elements) {
+                        if (element.name) {
+                            if (!element.name.startsWith('street')) {
+                                billingFormData[element.name] = element.value;
+                                if (element.name == "region_id") {
+                                    billingFormData['region'] = (!element.value.trim()) ? this.regionArray[this.guestShip['region_id']] : this.regionArray[element.value];
+                                    billingFormData['region_id'] = (!element.value.trim()) ? this.guestShip['region_id'] : element.value;
+                                    valid = true;
+                                }
+                                if (element.type === 'checkbox') billingFormData[element.name] = (element.checked) ? 1 : 0;
+                            } else {
+                                if (element.name.startsWith('street')) street.push(element.value);
+                            }
+                        }
+                    }
+                    street = street.filter(value => value);
+                    billingFormData['street'] = street;
+                    billingFormData['region'] = (billingFormData['region']['region']) ? billingFormData['region']['region'] : billingFormData['region'];
+                    delete billingFormData['billing_address_id'];
+                    this.loading = false;
+                    if (valid) {
+                        this.defBillAdr = billingFormData;
+                        formData["address"] = billingFormData;
+                    } else {
+                        return;
+                    }
+                } else {
+                    const selectedAddress = this.config.customerData.addresses[id];
+                    this.defBillAdr = selectedAddress;
+                    formData["address"] = this.formatAddress(selectedAddress);
+                }
+                formData["cartId"] = this.config.quoteData.entity_id;
+                const requestBody = JSON.stringify(formData);
+                var url = `/rest/${this.storeCode}/V1/guest-carts/${this.config.quoteData.entity_id}/billing-address`;
+                if (!this.guest) url = `/rest/${this.storeCode}/V1/carts/mine/billing-address`;
+                try {
+                    const response = await fetch(url, { method: 'POST', headers: this.buildHeaders(this.guest), body: requestBody});
+                    const data = await response.json();
+                    if (data.message) {
+                        this.displayWarning(data.message, '.payment-method', 'payment-method-warning');
+                        return;
+                    }
+                    this.isBillingFormOpen = false;
+                    this.fetchPaymentInformation();
+                } catch (error) {
+                    console.error('Error fetching payment methods:', error);
+                    return false;
+                }
+            },
+            /* OnChange Form Validation start */
+            onChangeValidateForm(event) {
+                const element = event.target;
+                const validation = JSON.parse(element.getAttribute('data-validate') || '{}');
+                if (validation['required-entry']) {
+                    if (validation['required-entry'] && !element.value.trim()) {
+                        this.errors[element.name] = this.message;
+                    } else if (validation['max_text_length'] && element.value.length > validation['max_text_length']) {
+                        this.errors[element.name] = 'Text is too long';
+                    } else if (validation['min_text_length'] && element.value.length < validation['min_text_length']) {
+                        this.errors[element.name] = 'Text is too short';
+                    } else {
+                        delete this.errors[element.name];
+                    }
+                }
+                if (this.guest) {
+                    if (['country_id', 'region', 'region_id', 'postcode'].includes(element.name)) {
+                        this.guestShip[element.name] = element.value;
+                        if (this.guestShip['region_id'] == "") delete this.guestShip['region_id'];
+                        delete this.guestShip['id'];
+                        this.fetchPreShippingMethods(this.guestShip);
+                    }
+                    let shipAddrData = {};
+                    this.addr[element.name] = element.value;
+                    const storageData = localStorage.getItem('vira-mage-cache-storage');
+                    if (storageData) shipAddrData = JSON.parse(storageData);
+                    shipAddrData['checkout-data'] = shipAddrData['checkout-data'] || {};
+                    shipAddrData['checkout-data']['shippingAddressFromData'] = this.addr;
+                    localStorage.setItem('vira-mage-cache-storage', JSON.stringify(shipAddrData));
+                }
+            },
+            /* get prefill shipping address */
+            getPrefillShipAddr() {
+                const storageData = localStorage.getItem('vira-mage-cache-storage');
+                if (!storageData) return false;
+                try {
+                    const checkoutData = JSON.parse(storageData);
+                    if (
+                        checkoutData &&
+                        checkoutData['checkout-data'] &&
+                        checkoutData['checkout-data']['shippingAddressFromData']
+                    ) {
+                        return checkoutData['checkout-data']['shippingAddressFromData'];
+                    }
+                } catch (error) {
+                    console.error("Error parsing local storage data:", error);
+                    return false;
+                }
+                return false;
+            },
+            /* Trigger form submit for shipping and billing */
+            triggerFormSubmit(formId) {
+                const form = document.getElementById(formId);
+                let valid = true;
+                if (formId === 'co-shipping-form') {
+                    this.errors = {};
+                    const elements = form.elements;
+                    for (let element of elements) {
+                        const validation = JSON.parse(element.getAttribute('data-validate') || '{}');
+                        if (validation['required-entry']) {
+                            if (validation['required-entry'] && !element.value.trim()) {
+                                valid = false;
+                                this.errors[element.name] = this.message;
+                            } else if (validation['max_text_length'] && element.value.length > validation['max_text_length']) {
+                                valid = false;
+                                this.errors[element.name] = 'Text is too long';
+                            } else if (validation['min_text_length'] && element.value.length < validation['min_text_length']) {
+                                valid = false;
+                                this.errors[element.name] = 'Text is too short';
+                            }
+                        }
+                    }
+                    const formData = {};
+                    let street = [];
+                    for (let element of elements) {
+                        if (element.name) {
+                            if (!element.name.startsWith('street')) {
+                                formData[element.name] = element.value;
+                                if (element.name == "region_id") formData['region'] = this.regionArray[element.value];
+                                if (element.type === 'checkbox') formData[element.name] = (element.checked) ? 1 : 0;
+                            } else {
+                                if (element.name.startsWith('street')) street.push(element.value);
+                            }
+                        }
+                    }
+                    street = street.filter(value => value);
+                    formData['street'] = street;
+                    if (valid) this.fetchPreShippingMethods(formData);
+                    this.loading = false;
+                } else {
+                    this.isBillingSameAsShipping(this.selectedBillingAddressId);
+                }
+            },
+            /* Fetch payment method based on shipping details */
+            async fetchPaymentMethods(formData) {
+                var url = `/rest/${this.storeCode}/V1/guest-carts/${this.config.quoteData.entity_id}/shipping-information`;
+                if (!this.guest) url = `/rest/${this.storeCode}/V1/carts/mine/shipping-information`;
+                const requestBody = JSON.stringify({ addressInformation: formData });
+                try {
+                    const response = await fetch(url, { method: 'POST', headers: this.buildHeaders(this.guest), body: requestBody});
+                    const data = await response.json();
+                    if (data.message) {
+                        this.displayWarning(data.message, '#checkout-shipping-method-load', 'shipping-method-warning', false);
+                        return;
+                    }
+                    if (this.config.payment.paypalExpress.isContextCheckout) data.payment_methods = data.payment_methods.filter(method => method.code !== 'paypal_express_bml');
+                    this.paymentMethods = data;
+                    this.step = "payment";
+                    this.loading = false;
+                    this.$dispatch('set-step', this.step)
+                    this.$dispatch('set-totals', data.totals)
+                    if (this.paymentMethods.payment_methods.length === 1) this.selectedPaymentMethod = this.paymentMethods.payment_methods[0].code;
+                    const discountSegment = data.totals.total_segments.find(segment => segment.code === 'discount');
+                    const couponField = document.getElementById('discount-code');
+                    if (discountSegment && couponField && couponField.value) this.discountCode = true;
+                    this.couponCode = data.totals.coupon_code;
+                } catch (error) {
+                    console.error('Error fetching payment methods:', error);
+                    return false;
+                }
+            },
+            /* Format address both billing and shipping */
+            formatAddress(address) {
+                const formattedAddress = Object.assign({}, address);
+                const regex = /\d/;
+                formattedAddress['customAttributes'] = formattedAddress['custom_attributes'];
+                delete formattedAddress['custom_attributes'];
+                if (regex.test(this.selectedAddressId)) {
+                    formattedAddress['customerAddressId'] = this.selectedAddressId;
+                    delete formattedAddress['customer_address_id'];
+                }
+                formattedAddress['street'] = Array.isArray(formattedAddress['street']) ? formattedAddress['street'].filter(value => value) : [];
+                formattedAddress['customerId'] = formattedAddress['customer_id'];
+                delete formattedAddress['customer_id'];
+                formattedAddress['countryId'] = formattedAddress['country_id'];
+                delete formattedAddress['country_id'];
+                if (formattedAddress['region']['region']) {
+                    formattedAddress['region'] = formattedAddress['region']['region'];
+                    formattedAddress['regionCode'] = address.region.region_code;
+                    formattedAddress['regionId'] = formattedAddress['region_id'];
+                } else {
+                    formattedAddress['region'] = formattedAddress['region'];
+                    if (formattedAddress['region_id']) formattedAddress['regionId'] = formattedAddress['region_id'];
+                }
+                delete formattedAddress['region_id'];
+                formattedAddress['vatId'] = formattedAddress['vat_id'];
+                delete formattedAddress['id'];
+                delete formattedAddress['vat_id'];
+                delete formattedAddress['default_billing'];
+                delete formattedAddress['default_shipping'];
+                delete formattedAddress['inline'];
+                return formattedAddress;
+            },
+            /* Apply discount */
+            async applyDiscount() {
+                const form = document.getElementById("discount-form")
+                if (!form) return;
+                const couponField = document.getElementById('discount-code');
+                if (couponField && couponField.value) this.discountCode = true; this.couponCode = couponField.value;
+                const inputFields = form.querySelectorAll('input[type="text"]');
+                let isValid = true;
+                inputFields.forEach(inputElement => {
+                    if (!inputElement.value.trim()) {
+                        this.displayWarning('Required field.', '.payment-option-inner', 'coupon-method-warning', false);
+                        isValid = false;
+                    }
+                });
+                form.addEventListener("submit", function (event) { event.preventDefault(); });
+                if (isValid) {
+                    var url = `/rest/${this.storeCode}/V1/guest-carts/${this.config.quoteData.entity_id}/coupons/${couponField.value}`;
+                    if (!this.guest) url = `/rest/${this.storeCode}/V1/carts/mine/coupons/${couponField.value}`;
+                    var method = 'PUT';
+                    if (document.getElementById('coupon-code').value == 'Cancel Coupon') {
+                        url = `/rest/${this.storeCode}/V1/guest-carts/${this.config.quoteData.entity_id}/coupons`;
+                        if (!this.guest) url = `/rest/${this.storeCode}/V1/carts/mine/coupons`;
+                        method = 'DELETE';
+                        this.discountCode = false;
+                        this.couponCode = null;
+                    }
+                    if (checkWarning = document.getElementById("coupon-method-warning")) checkWarning.remove();
+                    try {
+                        const response = await fetch(url, { method: method, headers: this.buildHeaders(this.guest)});
+                        const data = await response.json();
+                        if (data.message) {
+                            this.couponCode = null;
+                            this.discountCode = false;
+                            this.displayWarning(data.message, '.payment-option-inner', 'coupon-method-warning', false);
+                            return;
+                        }
+                        if (data) {
+                            const warningDiv = document.createElement('div');
+                            warningDiv.textContent = (this.couponCode == null) ? "Coupon Cancelled!" : "Coupon Applied!";
+                            warningDiv.id = 'coupon-method-success';
+                            warningDiv.classList.add('text-sm', 'text-green-600', 'mt-2');
+                            const targetElement = document.querySelector('.payment-option-inner');
+                            targetElement.appendChild(warningDiv);
+                            if (warningDiv) setTimeout(() => warningDiv.remove(), 5000);
+                            if (this.guest) {
+                                delete this.guestShipAddr['id'];
+                                this.fetchPreShippingMethods(this.guestShipAddr);
+                            } else {
+                                this.fetchShippingMethods(this.selectedAddressId);
+                            }
+                            this.fetchPaymentInformation();
+                        }
+                    } catch (error) {
+                        console.error('Error fetching payment methods:', error);
+                        return false;
+                    }
+                }
+            },
+            /* Cancel billing address while isAddressSameAsShipping */
+            cancelAddressSelection() {
+                this.isBillingFormOpen = false;
+                this.isAddressSameAsShipping = (this.config.quoteData.is_virtual) ? false : true;
+            },
+            /* Fetch payment information */
+            async fetchPaymentInformation() {
+                const dynamicValue = new Date().getTime();
+                var url = `/rest/${this.storeCode}/V1/guest-carts/${this.config.quoteData.entity_id}/payment-information?_=${dynamicValue}`;
+                if (!this.guest) var url = `/rest/${this.storeCode}/V1/carts/mine/payment-information?_=${dynamicValue}`;
+                try {
+                    const response = await fetch(url, {method: 'GET', headers: this.buildHeaders(this.guest)});
+                    const data = await response.json();
+                    if (data.message) {
+                        this.displayWarning(data.message, '.payment-option-inner', 'coupon-method-warning', false);
+                        return;
+                    }
+                    if (this.config.payment.paypalExpress.isContextCheckout) data.payment_methods = data.payment_methods.filter(method => method.code !== 'paypal_express_bml');
+                    this.paymentMethods = data;
+                    this.step = "payment";
+                    this.loading = false;
+                    this.$dispatch('set-step', this.step)
+                    this.$dispatch('set-totals', data.totals)
+                } catch (error) {
+                    console.error('Error fetching payment methods:', error);
+                    return false;
+                }
+            },
+            /* Set payment information */
+            async setPaymentInformation(value) {
+                const formData = {};
+                formData["paymentMethod"] = {};
+                formData["paymentMethod"]["method"] = value;
+                formData["cartId"] = this.config.quoteData.entity_id;
+                var url = `/rest/${this.storeCode}/V1/guest-carts/${this.config.quoteData.entity_id}/set-payment-information`;
+                if (!this.guest) url = `/rest/${this.storeCode}/V1/carts/mine/set-payment-information`;
+                if (this.guest) formData["email"] = (email = document.getElementById("customer-email")) ? email.value : this.getGuestEmail();
+                const requestBody = JSON.stringify(formData);
+                try {
+                    const response = await fetch(url, { method: 'POST', headers: this.buildHeaders(this.guest), body: requestBody});
+                    const data = await response.json();
+                    if (data.message) {
+                        this.displayWarning(data.message, '.payment-method', 'payment-method-warning');
+                        return;
+                    }
+                    return true;
+                } catch (error) {
+                    console.error('Error fetching payment methods:', error);
+                    return false;
+                }
+            },
+            /* Fetch summary total */
+            async getTotals() {
+                const dynamicValue = new Date().getTime();
+                var url = `/rest/${this.storeCode}/V1/guest-carts/${this.config.quoteData.entity_id}/totals?_=${dynamicValue}`;
+                if (!this.guest) url = `/rest/${this.storeCode}/V1/carts/mine/totals?_=${dynamicValue}`;
+                try {
+                    const response = await fetch(url, {method: 'GET', headers: this.buildHeaders(this.guest)});
+                    const data = await response.json();
+                    if (data.message) {
+                        this.displayWarning(data.message, '.payment-method', 'payment-method-warning');
+                        return;
+                    }
+                    this.$dispatch('set-totals', data)
+                } catch (error) {
+                    console.error('Error fetching payment methods:', error);
+                    return false;
+                }
+            },
+            moveToError() {
+                const errorFields = document.querySelectorAll('.field-error');
+                for (let field of errorFields) {
+                    if (field.textContent.trim().length > 0) {
+                        field.scrollIntoView({ behavior: "smooth", block: "center" });
+                        field.focus();
+                        break;
+                    }
+                }
+            },
+            checkCouponField() {
+                var inter = setInterval(() => {
+                    clearInterval(inter);
+                    const couponField = document.getElementById('discount-code');
+                    if (couponField && couponField.value) this.discountCode = true;
+                }, 1500);
+            },
+            /* Next step to the payment page with shipping validation */
+            goToStep(step) {
+                this.loading = true;
+                if (checkWarning = document.getElementById("shipping-method-warning")) checkWarning.remove();
+                if (step === 'payment' && this.selectedShippingMethod == null) {
+                    this.loading = false;
+                    var textContent = 'The shipping method is missing. Select the shipping method and try again.';
+                    this.displayWarning(textContent, '#checkout-shipping-method-load', 'shipping-method-warning', false);
+                    return;
+                }
+                if (step === 'payment') {
+                    const form = document.getElementById('co-shipping-method-form');
+                    const elements = form.elements;
+                    const formData = {};
+                    for (let element of elements) {
+                        if (element.name) {
+                            if (shippingMethod = document.querySelector('input[name="shipping_method"]:checked')) {
+                                var [carrierCode, methodCode] = shippingMethod.value.split('_');
+                                formData['shipping_carrier_code'] = carrierCode;
+                                formData['shipping_method_code'] = methodCode;
+                            }
+                            formData['extension_attributes'] = {};
+                        }
+                    }
+                    if (document.querySelector('input[name="shipping_address"]:checked') && !this.guest) {
+                        const selectedAddress = this.config.customerData.addresses[this.selectedAddressId];
+                        formData["shipping_address"] = this.formatAddress(selectedAddress);
+                        formData["billing_address"] = this.formatAddress(selectedAddress);
+                        this.defBillAdr = [];
+                        this.defBillAdr = selectedAddress;
+                    } else if (this.guest) {
+                        var formDatas = this.guestShippingForm()
+                        formData["shipping_address"] = formDatas;
+                        formData["billing_address"] = formDatas;
+                        this.defBillAdr = [];
+                        this.isAddressSameAsShipping = true;
+                        this.guestShipAddr = formDatas;
+                        this.defBillAdr = formDatas;
+                        this.selectedAddressId = "newship";
+                        const errorElement = document.getElementById("customer-email-error");
+                        if (errorElement && errorElement.textContent.trim() !== "") {
+                            this.loading = false;
+                            errorElement.scrollIntoView({ behavior: "smooth", block: "center" });
+                            errorElement.focus();
+                            return;
+                        } else {
+                            document.querySelector('[data-role="opc-continue"]').addEventListener('click', () => {
+                                const emailElement = document.getElementById("customer-email");
+                                if (emailElement.value == '') {
+                                    emailElement.dispatchEvent(new Event('change', { 'bubbles': true }));
+                                    emailElement.scrollIntoView({ behavior: "smooth", block: "center" });
+                                    emailElement.focus();
+                                }
+                            });
+                        }
+                        this.$dispatch('set-guestShipAddr', this.guestShipAddr)
+                    }
+                    this.$dispatch('set-selectedAddressId', this.selectedAddressId)
+                    this.$dispatch('set-selectedShippingMethod', this.selectedShippingMethod)
+                    this.$dispatch('set-shippingMethods', this.shippingMethods)
+                    this.$dispatch('set-selectedShippingTitle', this.selectedShippingTitle)
+                    this.fetchPaymentMethods(formData)
+                    this.checkCouponField();
+                }
+                if (step === 'shipping') {
+                    this.step = step;
+                    this.loading = false;
+                    this.$dispatch('set-step', this.step)
+                    if (this.guest) {
+                        var inter = setInterval(() => {
+                            clearInterval(inter);
+                            let e = localStorage.getItem('vira-mage-cache-storage');
+                            const checkoutData = JSON.parse(e);
+                            const inputElement = document.getElementById('customer-email');
+                            if (inputElement && checkoutData['checkout-data'] && checkoutData['checkout-data']['guestEmail']) {
+                                inputElement.value = checkoutData['checkout-data']['guestEmail'];
+                            }
+                        }, 1000);
+                    }
+                }
+            },
+            /* Guset shipping address form */
+            guestShippingForm() {
+                const form = document.getElementById("guest-shipping-form");
+                let valid = true;
+                this.errors = {};
+                const elements = form.elements;
+                for (let element of elements) {
+                    const validation = JSON.parse(element.getAttribute('data-validate') || '{}');
+                    if (validation['required-entry']) {
+                        if (validation['required-entry'] && !element.value.trim()) {
+                            valid = false;
+                            this.errors[element.name] = this.message;
+                            element.scrollIntoView({ behavior: "smooth", block: "center" });
+                            element.focus();
+                            break;
+                        } else if (validation['max_text_length'] && element.value.length > validation['max_text_length']) {
+                            valid = false;
+                            this.errors[element.name] = 'Text is too long';
+                        } else if (validation['min_text_length'] && element.value.length < validation['min_text_length']) {
+                            valid = false;
+                            this.errors[element.name] = 'Text is too short';
+                        }
+                    }
+                }
+                const formDatas = {};
+                let street = [];
+                for (let element of elements) {
+                    if (element.name) {
+                        if (!element.name.startsWith('street')) {
+                            formDatas[element.name] = element.value;
+                            if (element.name == "region_id") formDatas['region'] = this.regionArray[element.value];
+                        } else {
+                            if (element.name.startsWith('street')) street.push(element.value);
+                        }
+                    }
+                }
+                street = street.filter(value => value);
+                formDatas['street'] = street;
+                if (!valid) {
+                    this.loading = false;
+                    this.moveToError();
+                    return;
+                }
+                return formDatas;
+            },
+            /* Paypal inContextXpress checkout */
+            async inContextXpress() {
+                const widgetElement = document.getElementById('paypal-express-in-context-button');
+                const widgetConfig = JSON.parse(widgetElement.getAttribute('data-widget'));
+                paypal.Buttons({
+                    createOrder: async () => {
+                        try {
+                            this.continueToPayPal();
+                            return await this.fetchPaymentToken(
+                                widgetConfig.clientConfig.getTokenUrl,
+                                this.config.quoteData.entity_id,
+                                this.config.quoteData.customer_id,
+                                widgetConfig.clientConfig.button
+                            );
+                        } catch (error) {
+                            console.error('Error creating order', error);
+                        }
+                    },
+                    onApprove: async (data) => {
+                        try {
+                            const redirectUrl = await authorizePayment(
+                                widgetConfig.clientConfig.onAuthorizeUrl,
+                                data,
+                                data.quoteId
+                            );
+                            return actions.redirect(redirectUrl);
+                        } catch (error) {
+                            console.error('Payment authorization failed', error);
+                        }
+                    },
+                    onError: (err) => console.error("Transaction error:", err)
+                }).render('.paypal-buttons-context-iframe');
+            },
+            /* fetch payment token for paypal */
+            async fetchPaymentToken(getTokenUrl, quoteId, customerId = null, button) {
+                const params = new URLSearchParams({ quote_id: quoteId, customer_id: customerId, form_key: window.checkoutConfig.formKey, button });
+                const response = await fetch(getTokenUrl, {
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    method: 'POST',
+                    body: params,
+                    credentials: 'include'
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error('Error fetching payment token');
+                return result.token;
+            },
+            /* Place order for paypal */
+            async continueToPayPal() {
+                const formData = {};
+                formData["billingAddress"] = this.formatAddress(this.defBillAdr);
+                formData["paymentMethod"] = {};
+                formData["paymentMethod"]["method"] = this.selectedPaymentMethod;
+                formData["cartId"] = this.config.quoteData.entity_id;
+                var url = `/rest/${this.storeCode}/V1/guest-carts/${this.config.quoteData.entity_id}/set-payment-information`;
+                if (!this.guest) url = `/rest/${this.storeCode}/V1/carts/mine/set-payment-information`;
+                if (this.guest) formData["email"] = (email = document.getElementById("customer-email")) ? email.value : this.getGuestEmail();
+                const requestBody = JSON.stringify(formData);
+                try {
+                    const response = await fetch(url, {method: 'POST', headers: this.buildHeaders(this.guest), body: requestBody});
+                    const data = await response.json();
+                    if (data.message) {
+                        this.displayWarning(data.message, '.payment-method', 'payment-method-warning');
+                        return;
+                    }
+                    if (!this.config.payment.paypalExpress.isContextCheckout) window.location.href = this.config.payment.paypalExpress.redirectUrl[this.selectedPaymentMethod];
+                } catch (error) {
+                    console.error('Error fetching payment methods:', error);
+                    return false;
+                }
+            },
+            getGuestEmail () {
+                let e = localStorage.getItem('vira-mage-cache-storage');
+                const checkoutData = JSON.parse(e);
+                if (checkoutData && checkoutData['checkout-data'] && checkoutData['checkout-data']['guestEmail']) {
+                    return checkoutData['checkout-data']['guestEmail'];
+                }
+                return '';
+            },
+            /* Default Place Order */
+            async placeOrder() {
+                this.loading = true;
+                const formData = {};
+                if (this.guest) {
+                    formData["billing_address"] = this.defBillAdr;
+                    formData["email"] = (email = document.getElementById("customer-email")) ? email.value : this.getGuestEmail();
+                } else {
+                    /* const selectedAddress = this.config.customerData.addresses[this.selectedAddressId]; */
+                    const selectedAddress = this.defBillAdr;
+                    if (selectedAddress['id'] == "newship") selectedAddress['save_in_address_book'] = 0;
+                    formData["billing_address"] = this.formatAddress(selectedAddress);
+                }
+                formData["cartId"] = this.config.quoteData.entity_id;
+                formData["paymentMethod"] = {};
+                formData["paymentMethod"]["additional_data"] = null;
+                formData["paymentMethod"]["method"] = this.selectedPaymentMethod;
+                formData["paymentMethod"]["po_number"] = null;
+                const requestBody = JSON.stringify(formData);
+                var url = `/rest/${this.storeCode}/V1/guest-carts/${this.config.quoteData.entity_id}/payment-information`;
+                if (!this.guest) url = `/rest/${this.storeCode}/V1/carts/mine/payment-information`;
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: this.buildHeaders(this.guest),
+                        body: requestBody
+                    });
+                    const data = await response.json();
+                    this.loading = false;
+                    if (data.message) {
+                        this.displayWarning(data.message, '.payment-method', 'payment-method-warning');
+                        return;
+                    }
+                    localStorage.setItem('vira-mage-cache-storage', JSON.stringify({}));
+                    window.location.href = '/checkout/onepage/success/';
+                } catch (error) {
+                    console.error('Error fetching payment methods:', error);
+                    return false;
+                }
+            }
+        };
+    }
+    function summary() {
+        return {
+            config: window.checkoutConfig,
+            getCartSummaryItemsCount:0,
+            showDetails: false,
+            step: 'shipping',
+            guest: false,
+            selectedAddressId: '',
+            selectedShippingAddress: [],
+            paymentMethods: [],
+            selectedShippingTitle: '',
+            totalSegments: [],
+            guestShipAddr: [],
+            init() {
+                this.guest = this.config.customerData.length === 0;
+                this.getCartSummaryItemsCount();
+                window.addEventListener('set-step', (event) => {this.step = event.detail;});
+                window.addEventListener('set-totals', (event) => {
+                    this.paymentMethods = event.detail;
+                    this.totalSegments = event.detail.total_segments;
+                });
+                window.addEventListener('set-selectedAddressId', (event) => {
+                    this.selectedAddressId = event.detail;
+                    this.selectedShippingAddress = (this.guest) ? this.guestShipAddr : this.config.customerData.addresses[this.selectedAddressId];
+                });
+                window.addEventListener('set-guestShipAddr', (event) => {this.guestShipAddr = event.detail;});
+                window.addEventListener('set-selectedShippingTitle', (event) => {this.selectedShippingTitle = event.detail;});
+            },
+            /* Get summary item count */
+            getCartSummaryItemsCount() {
+                if (Array.isArray(this.config.quoteItemData)) {
+                    this.getCartSummaryItemsCount = this.config.quoteItemData.reduce((totalQty, item) => {
+                        return totalQty + (item.qty ? parseFloat(item.qty) : 0); // Parse and sum qty values
+                    }, 0);
+                }
+            },
+            /* Get summary item total price */
+            getCartItemTotalPrice(price) {
+                const storeLocale = '<?= /* @noEscape */ $viewModel->getStoreLocale() ?>'.replace("_", "-");
+                const currentCurrencyCode = '<?= /* @noEscape */ $viewModel->getCurrentCurrencyCode() ?>';
+                return new Intl.NumberFormat(storeLocale, {
+                    style: 'currency',
+                    currency: currentCurrencyCode,
+                }).format(price);
+            },
+            /* Go to the shipping page */
+            goToStep(step) {
+                this.step = step;
+                this.$dispatch('set-step', this.step)
+                var inter = setInterval(() => {
+                    clearInterval(inter);
+                    let e = localStorage.getItem('vira-mage-cache-storage');
+                    const checkoutData = JSON.parse(e);
+                    const inputElement = document.getElementById('customer-email');
+                    if (inputElement && checkoutData['checkout-data'] && checkoutData['checkout-data']['guestEmail']) {
+                        inputElement.value = checkoutData['checkout-data']['guestEmail'];
+                    }
+                }, 1000);
+            }
+        };
+    }
+</script>

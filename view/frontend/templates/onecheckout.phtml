@@ -1,0 +1,78 @@
+<?php
+/**
+ * ViraXpress - https://www.viraxpress.com
+ *
+ * LICENSE AGREEMENT
+ *
+ * This file is part of the ViraXpress package and is licensed under the ViraXpress license agreement.
+ * You can view the full license at:
+ * https://www.viraxpress.com/license
+ *
+ * By utilizing this file, you agree to comply with the terms outlined in the ViraXpress license.
+ *
+ * DISCLAIMER
+ *
+ * Modifications to this file are discouraged to ensure seamless upgrades and compatibility with future releases.
+ *
+ * @category    ViraXpress
+ * @package     ViraXpress_CheckoutOptimization
+ * @author      ViraXpress
+ * @copyright   © 2024 ViraXpress (https://www.viraxpress.com/)
+ * @license     https://www.viraxpress.com/license
+ */
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Helper\SecureHtmlRenderer;
+/**
+ * @var Escaper $escaper
+ * @var SecureHtmlRenderer $secureRenderer
+ * @var \Magento\Framework\View\Element\BlockInterface $block
+ */
+// Ensure that serialized checkout config is thoroughly sanitized on the server-side.
+$serializedCheckoutConfig = /* @noEscape */ $block->getSerializedCheckoutConfig();
+$scriptString = <<<script
+    // Only include necessary properties in window.checkoutConfig
+    window.checkoutConfig = {$serializedCheckoutConfig};
+    // Create aliases for customer.js model from customer module
+    window.isCustomerLoggedIn = window.checkoutConfig.isCustomerLoggedIn;
+    window.customerData = window.checkoutConfig.customerData;
+script;
+?>
+<!-- Render the script securely -->
+<?= /* @noEscape */ $secureRenderer->renderTag('script', [], $scriptString, false) ?>
+
+<div id="checkout" class="checkout-container container ">
+        <div class="opc-wrapper mb-10">
+            <div id="checkoutSteps" class="opc" x-data="checkout()" x-on:keydown.escape="isShipModalOpen=false">
+                <!-- Progress Bar -->
+                <div class="opc-progress-bar py-10 grid grid-flow-col auto-cols-fr lg:mx-auto lg:max-w-xl">
+                    <template x-if="!config.quoteData.is_virtual">
+                        <div @click="goToStep('shipping')" x-bind:class="`opc-progress-bar-item relative text-xs md:text-sm lg:text-base px-5 py-2 pt-8 text-center text-gray-200 font-medium ${step === 'shipping' ? ' _active text-gray-900' : '_complete text-gray-900 cursor-pointer'}`">
+                            <span><?= $escaper->escapeHtml(__('Shipping')) ?></span>
+                        </div>
+                    </template>
+                    <div x-bind:class="`opc-progress-bar-item relative text-xs md:text-sm lg:text-base px-5 py-2 pt-8 text-center text-gray-200 font-medium ${(step === 'payment' || config.quoteData.is_virtual) ? '_active text-gray-900' : ''}`">
+                        <span><?= $escaper->escapeHtml(__('Review & Payments')) ?></span>
+                    </div>
+                </div>
+                <div class="flex flex-col flex-col-reverse lg:flex-row justify-start items-start gap-10 lg:gap-20">
+                    <div class="flex-1 w-full">
+                        <!-- Guest Email -->
+                        <template x-if="guest">
+                            <?= $block->getChildHtml('guest-email'); ?>
+                        </template>
+                        <!-- Shipping Details -->
+                        <template x-if="!config.quoteData.is_virtual">
+                            <?= $block->getChildHtml('shipping'); ?>
+                        </template>
+                        <!-- Payment Details -->
+                        <?= $block->getChildHtml('payment'); ?>
+                    </div>
+                    <div class="w-full lg:w-96 lg:sticky top-0 z-50">
+                        <!-- Display summary here -->
+                        <?= $block->getChildHtml('summary'); ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+</div>

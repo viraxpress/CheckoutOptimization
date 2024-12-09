@@ -1,0 +1,187 @@
+<?php
+/**
+ * ViraXpress - https://www.viraxpress.com
+ *
+ * LICENSE AGREEMENT
+ *
+ * This file is part of the ViraXpress package and is licensed under the ViraXpress license agreement.
+ * You can view the full license at:
+ * https://www.viraxpress.com/license
+ *
+ * By utilizing this file, you agree to comply with the terms outlined in the ViraXpress license.
+ *
+ * DISCLAIMER
+ *
+ * Modifications to this file are discouraged to ensure seamless upgrades and compatibility with future releases.
+ *
+ * @category    ViraXpress
+ * @package     ViraXpress_CheckoutOptimization
+ * @author      ViraXpress
+ * @copyright   © 2024 ViraXpress (https://www.viraxpress.com/)
+ * @license     https://www.viraxpress.com/license
+ */
+
+/**
+ * @var \Magento\Framework\Escaper $escaper
+ */
+?>
+<div class="opc-sidebar opc-summary-wrapper " x-data="summary()">
+    <div id="opc-sidebar" class="p-5 bg-neutral-100 rounded mb-5">
+        <div class="opc-block-summary">
+            <span class="title block mb-3 font-semibold"><?= $escaper->escapeHtml(__('Order Summary'))?></span>
+        </div>
+        <template x-if="step === 'payment'">
+            <table class="data table table-totals mb-8 w-full">
+                <tbody>
+                    <template x-for="(value, index) in totalSegments">
+                        <template x-if="value.code != 'grand_total'">
+                            <tr x-bind:class="`totals ${value.code}`">
+                                <th class="mark text-left" scope="row" x-text="value.title"></th>
+                                <td x-bind:class="`amount ${value.code}`" class="text-right">
+                                    <span class="price font-semibold " data-th="value.title"
+                                    x-text="getCartItemTotalPrice(value.value)"></span>
+                                </td>
+                            </tr>
+                        </template>
+                    </template>
+                    <template x-for="(value, index) in totalSegments">
+                        <template x-if="value.code == 'grand_total'">
+                            <tr class="grand totals">
+                                <th class="mark text-left" scope="row">
+                                    <strong><?= $escaper->escapeHtml(__('Order Total')) ?></strong>
+                                </th>
+                                <td class="amount text-right">
+                                    <strong>
+                                        <span class="price font-semibold" x-text="getCartItemTotalPrice(value.value)"></span>
+                                    </strong>
+                                </td>
+                            </tr>
+                        </template>
+                    </template>
+                </tbody>
+            </table>
+        </template>
+
+        <div class="block items-in-cart active" data-collapsible="true"
+        role="tablist" x-data="{ showDetails: false }">
+            <div class="title flex justify-start items-center gap-5 cursor-pointer" data-role="title" role="tab" aria-selected="true"
+            aria-expanded="true" tabindex="0" @click="showDetails = !showDetails">
+                <strong role="heading" class="block w-full" aria-level="1">
+                    <span x-text="getCartSummaryItemsCount"></span>
+                    <template x-if="getCartSummaryItemsCount == 1">
+                        <span><?= $escaper->escapeHtml(__('Item in Cart')) ?></span>
+                    </template>
+                    <template x-if="getCartSummaryItemsCount > 1">
+                        <span><?= $escaper->escapeHtml(__('Items in Cart')) ?></span>
+                    </template>
+                </strong>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 transition-transform duration-300 transform" :class="showDetails ? 'rotate-180' : 'rotate-0'">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                </svg>
+            </div>
+            <div x-show="showDetails" class="content minicart-items"
+            data-role="content" role="tabpanel" aria-hidden="false">
+                <div class="minicart-items-wrapper">
+                    <ol class="minicart-items my-5 space-y-5">
+                        <template x-for="(value, index) in config.quoteItemData">
+                            <li class="product-item ">
+                                <div class="product flex justify-start items-start gap-5">
+                                    <span class="product-image-container min-w-[80px] w-20 inline-block">
+                                        <span class="product-image-wrapper block">
+                                            <img loading="lazy" x-bind:src="config.imageData[value.item_id].src"
+                                            x-bind:width="config.imageData[value.item_id].width"
+                                            x-bind:height="config.imageData[value.item_id].height"
+                                            x-bind:alt="config.imageData[value.item_id].alt"
+                                            x-bind:title="value.name">
+                                        </span>
+                                    </span>
+                                    <div class="product-item-details">
+                                        <div class="product-item-inner space-y-2">
+                                            <div class="product-item-name-block space-y-2">
+                                                <strong class="product-item-name" x-text="value.name"></strong>
+                                                <div class="details-qty">
+                                                    <span class="label"><span>Qty</span></span>
+                                                    <span class="value" x-text="value.qty"></span>
+                                                </div>
+                                            </div>
+                                            <div class="subtotal">
+                                                <span x-bind:class="(value.row_total_incl_tax) ? 'price-including-tax' : 'price-excluding-tax'">
+                                                    <span class="cart-price">
+                                                        <span class="price font-semibold"
+                                                        x-text="getCartItemTotalPrice(value.price_incl_tax || value.price_excl_tax)"></span>
+                                                    </span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <template x-if="value.options.length > 0">
+                                            <div class="product options mt-2" data-collapsible="true"
+                                            role="tablist" x-data="{ showDetails: false }">
+                                                <span class="toggle text-primary cursor-pointer underline inline-flex items-center gap-1" data-role="title"
+                                                role="tab" @click="showDetails = !showDetails">
+                                                    <span><?= $escaper->escapeHtml(__('Show options')) ?></span>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 transition-transform duration-300 transform" :class="showDetails ? 'rotate-180' : 'rotate-0'">
+                                                      <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"></path>
+                                                    </svg>
+                                                </span>
+                                                <div x-show="showDetails" data-role="content"
+                                                class="content" role="tabpanel" aria-hidden="false" style="">
+                                                    <dl class="item-options space-y-2">
+                                                        <template x-for="opt in value.options">
+                                                            <span class="block flex flex-col justify-start items-start gap-1">
+                                                                <dt class="label font-semibold" x-text="opt.label"></dt>
+                                                                <dd class="values"x-html="opt.value"></dd>
+                                                            </span>
+                                                        </template>
+                                                    </dl>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </li>
+                        </template>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <template x-if="!config.quoteData.is_virtual && step == 'payment'">
+        <div class="opc-block-shipping-information">
+            <div class="shipping-information divide-y divide-gray-200">
+                <div class="ship-to py-8">
+                    <div class="shipping-information-title flex justify-between items-center gap-5 mb-2">
+                        <span class="font-medium"><?= $escaper->escapeHtml(__('Ship To:')) ?></span>
+                        <button class="action action-edit text-green-600" @click="goToStep('shipping')">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="shipping-information-content">
+                        <p x-text="`${selectedShippingAddress.firstname} ${selectedShippingAddress.lastname}`"></p>
+                        <p x-text="selectedShippingAddress.street.join(', ')"></p>
+                        <p x-text="`${selectedShippingAddress.city}, ${(selectedShippingAddress.region.region) ? selectedShippingAddress.region.region : selectedShippingAddress.region}, ${selectedShippingAddress.postcode}`"></p>
+                        <p x-text="selectedShippingAddress.country_id"></p>
+                        <p x-text="selectedShippingAddress.telephone"></p>
+                    </div>
+                </div>
+                <div class="ship-via py-8">
+                    <div class="shipping-information-title flex justify-between items-center gap-5 mb-2">
+                        <span class="font-medium"><?= $escaper->escapeHtml(__('Shipping Method:')) ?></span>
+                        <button class="action action-edit text-green-600" @click="goToStep('shipping')">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="shipping-information-content">
+                        <span class="value" x-text="selectedShippingTitle"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
