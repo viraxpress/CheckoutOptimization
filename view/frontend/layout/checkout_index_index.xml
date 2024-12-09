@@ -1,0 +1,80 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * ViraXpress - https://www.viraxpress.com
+ *
+ * LICENSE AGREEMENT
+ *
+ * This file is part of the ViraXpress package and is licensed under the ViraXpress license agreement.
+ * You can view the full license at:
+ * https://www.viraxpress.com/license
+ *
+ * By utilizing this file, you agree to comply with the terms outlined in the ViraXpress license.
+ *
+ * DISCLAIMER
+ *
+ * Modifications to this file are discouraged to ensure seamless upgrades and compatibility with future releases.
+ *
+ * @category    ViraXpress
+ * @package     ViraXpress_CheckoutOptimization
+ * @author      ViraXpress
+ * @copyright   © 2024 ViraXpress (https://www.viraxpress.com/)
+ * @license     https://www.viraxpress.com/license
+ */
+-->
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" layout="checkout" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body>    
+
+        <referenceBlock name="page.main.title" remove="true" />
+        <referenceBlock name="copyright" remove="true"/>
+
+
+        <referenceBlock name="logo">
+            <action method="setTemplate">
+                <argument name="template" xsi:type="string">ViraXpress_CheckoutOptimization::html/header/logo.phtml</argument>
+            </action>
+        </referenceBlock>
+
+        <referenceBlock name="checkout.root">
+            <action method="setTemplate" ifconfig="viraxpress_config/checkout_theme_switcher/enable_vira_checkout">
+                <argument name="template" xsi:type="string">ViraXpress_CheckoutOptimization::onecheckout.phtml</argument>
+            </action>
+            <!-- Guest Email Block -->
+            <block name="guest-email" ifconfig="viraxpress_config/checkout_theme_switcher/enable_vira_checkout" class="Magento\Framework\View\Element\Template">
+                <action method="setTemplate">
+                    <argument name="template" xsi:type="string">ViraXpress_CheckoutOptimization::guest-email.phtml</argument>
+                </action>
+                <arguments>
+                    <argument name="viewModel" xsi:type="object">ViraXpress\CheckoutOptimization\ViewModel\OneCheckout</argument>
+                </arguments>
+            </block>
+            <!-- Shipping Block -->
+            <block name="shipping" ifconfig="viraxpress_config/checkout_theme_switcher/enable_vira_checkout" class="Magento\Framework\View\Element\Template">
+                <action method="setTemplate">
+                    <argument name="template" xsi:type="string">ViraXpress_CheckoutOptimization::shipping.phtml</argument>
+                </action>
+            </block>
+            <!-- Payment Block -->
+            <block name="payment" ifconfig="viraxpress_config/checkout_theme_switcher/enable_vira_checkout" class="Magento\Framework\View\Element\Template">
+                <action method="setTemplate">
+                    <argument name="template" xsi:type="string">ViraXpress_CheckoutOptimization::payment.phtml</argument>
+                </action>
+                <block name="paypal_smart_button" class="Magento\Paypal\Block\Express\InContext\SmartButton" />
+            </block>
+            <!-- Summary Block -->
+            <block name="summary" ifconfig="viraxpress_config/checkout_theme_switcher/enable_vira_checkout" class="Magento\Framework\View\Element\Template">
+                <action method="setTemplate">
+                    <argument name="template" xsi:type="string">ViraXpress_CheckoutOptimization::summary.phtml</argument>
+                </action>
+            </block>
+        </referenceBlock>
+        <!-- AlpineJs Script Block -->
+        <referenceContainer name="before.body.end">
+            <block class="Magento\Framework\View\Element\Template" ifconfig="viraxpress_config/checkout_theme_switcher/enable_vira_checkout" name="checkout-alpinejs-renderer" template="ViraXpress_CheckoutOptimization::js/script.phtml">
+                <arguments>
+                    <argument name="viewModel" xsi:type="object">ViraXpress\CheckoutOptimization\ViewModel\OneCheckout</argument>
+                </arguments>
+            </block>
+        </referenceContainer>
+    </body>
+</page>

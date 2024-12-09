@@ -1,0 +1,483 @@
+<?php
+/**
+ * ViraXpress - https://www.viraxpress.com
+ *
+ * LICENSE AGREEMENT
+ *
+ * This file is part of the ViraXpress package and is licensed under the ViraXpress license agreement.
+ * You can view the full license at:
+ * https://www.viraxpress.com/license
+ *
+ * By utilizing this file, you agree to comply with the terms outlined in the ViraXpress license.
+ *
+ * DISCLAIMER
+ *
+ * Modifications to this file are discouraged to ensure seamless upgrades and compatibility with future releases.
+ *
+ * @category    ViraXpress
+ * @package     ViraXpress_CheckoutOptimization
+ * @author      ViraXpress
+ * @copyright   © 2024 ViraXpress (https://www.viraxpress.com/)
+ * @license     https://www.viraxpress.com/license
+ */
+
+/**
+ * @var \Magento\Framework\Escaper $escaper
+ */
+?>
+<div x-show="step === 'shipping'">
+    <!-- Add shipping list here -->
+    <div id="shipping" class="checkout-shipping-address mb-10">
+        <div class="step-title text-xl text-gray-900 pb-5 font-medium flex justify-start items-start gap-5" data-role="title">
+            <?= $escaper->escapeHtml(__('Shipping Address')) ?>
+        </div>
+        <div class="step-content" data-role="content" id="checkout-step-shipping">
+            <div class="field addresses" x-show="!guest">
+                <template x-if="config.customerData.addresses">
+                    <div class="control mt-1">
+                        <div class="shipping-address-items grid grid-cols-1 lg:grid-cols-3 gap-5">
+                            <template x-for="address in config.customerData.addresses" :key="address.id">
+                                <template x-if="address.firstname">
+                                    <div x-bind:class="`shipping-address-item ${selectedAddressId === address.id ? 'selected-item' : 'not-selected-item'}`" class="border border-gray-200 rounded p-5">
+                                       <div>
+                                            <p class="text-base" x-text="`${address.firstname} ${address.lastname}`"></p>
+                                            <p class="text-base" x-text="address.street.join(', ')"></p>
+                                            <p class="text-base" x-text="`${address.city}, ${(address.region.region)?address.region.region:address.region}, ${address.postcode}`"></p>
+                                            <p class="text-base" x-text="address.country_id"></p>
+                                            <p class="text-base" x-text="address.telephone"></p>
+                                        </div>
+                                        <div class="mt-5 flex justify-between items-center gap-5">
+                                            <div>
+                                                <input type="radio" :id="'address-' + address.id"
+                                                name="shipping_address" form="co-shipping-method-form"
+                                                :value="address.id" x-model="selectedAddressId" class="radio h-4 w-4 cursor-pointer border-gray-300 text-primary focus:ring-primary">
+                                                <label :for="'address-' + address.id" class="text-base ml-2 cursor-pointer">
+                                                    <?= $escaper->escapeHtml(__('Ship Here')) ?>
+                                                </label>
+                                            </div>
+
+                                            <template x-if="address.id === 'newship'">
+                                                <button type="button" class="action edit-address-link text-green-600"
+                                                x-on:click="isShipModalOpen = true">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit">
+                                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                                    </svg>
+                                                </button>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            
+                <template x-if="hasCustomerAddresses && !hasNewshipAddress">
+                    <div class="new-address-popup mt-5">
+                        <button type="button" class="action action-show-popup secondary-btn ring-2" x-on:click="isShipModalOpen = true">
+                            <span><?= $escaper->escapeHtml(__('New Address')) ?></span>
+                        </button>
+                    </div>
+                </template>
+            </div>
+            <form x-show="guest" class="form form-shipping-address"
+            id="guest-shipping-form" data-hasrequired="* Required Fields">
+                <div id="shipping-new-address-form" class="fieldset address grid grid-cols-2 gap-5">
+                    <template x-for="(address, index) in addressFormFields" :key="index">
+                    <div x-bind:class="`address-form-fields ${index}-field ` + 
+                        (address.required == '1' ? '_required col-span-2 lg:col-span-1' : '') +
+                        (address.formElement == 'multiline' ? 'field col-span-2 lg:col-span-2' : '') +
+                        (address.required != '1' && address.formElement != 'multiline' ? 'field col-span-2 lg:col-span-1' : '')">
+                            <template x-if="address.formElement == 'input' && index != 'region' && index != 'region_id'">
+                                <div>
+                                    <template x-if="address.dataType != 'hidden'">
+                                        <label class="label block text-sm leading-6 text-gray-900" >
+                                            <span x-text="address.label"></span>
+                                            <template x-if="address.required == '1'">
+                                                <span class="text-required ml-1">*</span>
+                                            </template>
+                                        </label>
+                                    </template>
+                                    <div class="control mt-1" :class="address.formElement == 'multiline' ? 'flex flex-col lg:flex-row gap-5' : 'block'">
+                                        <input class="input-text block w-full rounded-md border-0 py-2.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6" x-bind:type="address.dataType"
+                                        x-bind:name="index" x-on:input.debounce="onChangeValidateForm($event)"
+                                        x-bind:value="getPrefillShipAddr ? getPrefillShipAddr[index] : ''"
+                                        x-bind:data-validate="JSON.stringify(address.validation)">
+                                    </div>
+                                    <div class="field-error text-base text-error mt-2" x-show="errors[index]" x-text="errors[index]"></div>
+                                </div>
+                            </template>
+                            <template x-if="address.formElement == 'multiline'">
+                                <div>
+                                    <template x-if="address.dataType != 'hidden'">
+                                        <label class="label block text-sm leading-6 text-gray-900" >
+                                            <span x-text="address.label"></span>
+                                            <template x-if="address.required == '1'">
+                                                <span class="text-required ml-1">*</span>
+                                            </template>
+                                        </label>
+                                    </template>
+                                    <div class="control mt-1" :class="address.formElement == 'multiline' ? 'flex flex-col lg:flex-row gap-5' : 'block'">
+                                        <template x-for="(i, indx) in addressStreetArray">
+                                            <div class="block w-full">
+                                                <input class="input-text block w-full rounded-md border-0 py-2.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
+                                                x-on:input.debounce="onChangeValidateForm($event)" type="text"
+                                                x-bind:name="index + '[' + indx + ']'"
+                                                x-bind:value="getPrefillShipAddr ? getPrefillShipAddr[index + '[' + indx + ']'] : ''"
+                                                x-bind:data-validate="(indx == '0') ? JSON.stringify(address.validation) : []">
+                                                <div class="field-error text-base text-error mt-2" x-show="errors[index + '[' + indx + ']']" x-text="errors[index + '[' + indx + ']']"></div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                            <template x-if="address.formElement == 'select' && index == 'country_id'">
+                                <div>
+                                    <template x-if="address.dataType != 'hidden'">
+                                        <label class="label block text-sm leading-6 text-gray-900" >
+                                            <span x-text="address.label"></span>
+                                            <template x-if="address.required == '1'">
+                                                <span class="text-required ml-1">*</span>
+                                            </template>
+                                        </label>
+                                    </template>
+                                    <div class="control mt-1" :class="address.formElement == 'multiline' ? 'flex flex-col lg:flex-row gap-5' : 'block'">
+                                        <select class="select"
+                                        x-on:input.debounce="onChangeValidateForm($event)"
+                                        @change="onCountryChange($el.id)" id="ship-guest-country"
+                                        x-bind:name="index"
+                                        x-bind:data-validate="JSON.stringify(address.validation)">
+                                            <template x-for="(option, index) in address.options">
+                                                <option :value="option.value"
+                                                :selected="defaultAddress.country_id == option.value"
+                                                x-text="option.label"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+                                </div>
+                            </template>
+                            <template x-if="isRegionAvailable && index == 'region_id'">
+                                <div>
+                                    <template x-if="address.dataType == 'hidden'">
+                                        <label class="label block text-sm leading-6 text-gray-900" >
+                                            <span x-text="address.label"></span>
+                                            <template x-if="address.required == '1'">
+                                                <span class="text-required ml-1">*</span>
+                                            </template>
+                                        </label>
+                                    </template>
+                                    <div class="control mt-1" :class="address.formElement == 'multiline' ? 'flex flex-col lg:flex-row gap-5' : 'block'">
+                                        <select class="select region-select-input"
+                                        x-on:input.debounce="onChangeValidateForm($event)" id="region_id"
+                                        x-bind:name="index" x-bind:data-validate="JSON.stringify(address.validation)">
+                                            <option value>
+                                                <?= $escaper->escapeHtml(
+                                                    __('Please select a region, state or province.')
+                                                ) ?>
+                                            </option>
+                                            <template x-for="(option, index) in regionArray">
+                                                <option :value="index"
+                                                x-bind:selected="getPrefillShipAddr ? getPrefillShipAddr['region_id'] === index : ''"
+                                                x-text="option"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+                                </div>
+                            </template>
+                            <template x-if="!isRegionAvailable && index == 'region'">
+                                <div>
+                                    <template x-if="address.dataType != 'hidden'">
+                                        <label class="label block text-sm leading-6 text-gray-900" >
+                                            <span x-text="address.label"></span>
+                                            <template x-if="address.required == '1'">
+                                                <span class="text-required ml-1">*</span>
+                                            </template>
+                                        </label>
+                                    </template>
+                                    <div class="control mt-1" :class="address.formElement == 'multiline' ? 'flex flex-col lg:flex-row gap-5' : 'block'">
+                                        <input class="input-text block w-full rounded-md border-0 py-2.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6 region-select-input"
+                                        x-on:input.debounce="onChangeValidateForm($event)"
+                                        x-bind:type="address.dataType"
+                                        x-bind:value="getPrefillShipAddr ? getPrefillShipAddr[index] : ''"
+                                        x-bind:name="index"
+                                        x-bind:data-validate="JSON.stringify(address.validation)">
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- Display selected shipping methods here -->
+    <div id="opc-shipping_method" class="checkout-shipping-method mb-10" role="presentation">
+        <div class="checkout-shipping-method">
+            <div class="step-title text-xl text-gray-900 pb-5 font-medium" data-role="title"><?= $escaper->escapeHtml(__('Shipping Methods')) ?></div>
+            <div id="checkout-step-shipping_method" class="step-content"
+            data-role="content" role="tabpanel" aria-hidden="false">
+                <form id="co-shipping-method-form" class="form methods-shipping"
+                novalidate="novalidate" @submit.prevent="goToStep('payment')">
+                    <div id="checkout-shipping-method-load">
+                        <table class="table-checkout-shipping-method">
+                            <!-- <thead>
+                                <tr class="row">
+                                    <th class="col col-method p-2 text-left"><?= $escaper->escapeHtml(__('Select Method')) ?></th>
+                                    <th class="col col-price p-2 text-left"><?= $escaper->escapeHtml(__('Price')) ?></th>
+                                    <th class="col col-method p-2 text-left"><?= $escaper->escapeHtml(__('Method Title')) ?></th>
+                                    <th class="col col-carrier p-2 text-left"><?= $escaper->escapeHtml(__('Carrier Title')) ?></th>
+                                </tr>
+                            </thead> -->
+                            <tbody>
+                                <template x-for="method in shippingMethods" :key="method.method_code">
+                                    <tr class="row">
+                                        <td class="col col-method p-2 text-left text-base">
+                                            <input type="radio" :id="'method-' + method.method_code"
+                                            name="shipping_method"
+                                            :value="method.carrier_code + '_' + method.method_code"
+                                            x-model="selectedShippingMethod"
+                                            @change="setSelectedShippingTitle(method)"
+                                            class="radio h-4 w-4 cursor-pointer border-gray-300 text-primary focus:ring-primary">
+                                        </td>
+                                        <td class="col col-price p-2 px-5 text-left text-base">
+                                            <span class="price">
+                                                <span class="price"
+                                                x-text="getCartItemTotalPrice(method.price_incl_tax || method.price_excl_tax)"></span>
+                                            </span>
+                                        </td>
+                                        <td class="col col-method p-2 px-5 text-left text-base" x-text="method.method_title"
+                                        :id="'label_method_' + method.carrier_code + '_' + method.method_code"></td>
+                                        <td class="col col-carrier p-2 px-5 text-left text-base" x-text="method.carrier_title"
+                                        :id="'label_method_' + method.carrier_code + '_' + method.method_code"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="actions-toolbar mt-10" id="shipping-method-buttons-container">
+                        <div class="primary">
+                            <button data-role="opc-continue" :disabled="loading"
+                            class="button action continue primary relative primary-btn text-base w-full lg:w-max next-button">
+                                <span x-show="loading" class="loader w-6 h-6 border-2 border-t-transparent border-white rounded-full animate-spin"></span>
+                                <span><?= $escaper->escapeHtml(__('Continue to Payment')) ?></span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- Modal Wrappers -->
+    <div class="modals-wrapper">
+        <div 
+            x-show="isShipModalOpen"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            class="fixed inset-0 bg-black bg-opacity-50 z-[500]"
+            @click="isShipModalOpen = false"
+            style="">
+        </div>
+
+        <div 
+            x-show="isShipModalOpen"
+            x-transition:enter="transition ease-out duration-300 transform"
+            x-transition:enter-start="opacity-0 scale-90"
+            x-transition:enter-end="opacity-100 scale-100"
+            x-transition:leave="transition ease-in duration-200 transform"
+            x-transition:leave-start="opacity-100 scale-100"
+            x-transition:leave-end="opacity-0 scale-90"
+            class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-lg z-[600] max-w-[90%] md:max-w-sm lg:max-w-[705px] w-full">
+
+            <!-- Scrollable Content -->
+            <div class="relative max-h-[80vh] overflow-y-auto p-8 md:p-10 md:py-12 ">
+                <!-- Close Button -->
+                <div class="absolute top-2 right-2 z-10">
+                    <button 
+                        @click="isShipModalOpen = false"
+                        class="p-2 rounded-md hover:bg-gray-100"
+                        type="button">
+                        <svg 
+                            xmlns="http://www.w3.org/2000/svg" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24" 
+                            class="text-asseenontv-tooltip" 
+                            width="20" 
+                            height="20" 
+                            role="img">
+                            <path 
+                                stroke-linecap="round" 
+                                stroke-linejoin="round" 
+                                stroke-width="2" 
+                                d="M6 18L18 6M6 6l12 12">
+                            </path>
+                            <title>x</title>
+                        </svg>
+                    </button>
+                </div>
+                <div id="modal-content-ship" class="modal-content" data-role="content">
+                    <div class="text-xl text-gray-900 pb-5 font-medium flex justify-start items-start gap-5">
+                        <?= $escaper->escapeHtml(__('Shipping Address')) ?>
+                    </div>
+                    <div id="opc-new-shipping-address">
+                        <form class="form form-shipping-address" id="co-shipping-form"
+                        data-hasrequired="* Required Fields">
+                            <div id="shipping-new-address-form" class="fieldset address grid grid-cols-2 gap-5">
+                            <template x-for="(address, index) in addressFormFields">
+                                <div x-bind:class="`address-form-fields ${index}-field ` + 
+                                    (address.required == '1' ? '_required col-span-2 lg:col-span-1' : '') +
+                                    (address.formElement == 'multiline' ? 'field col-span-2 lg:col-span-2' : '') +
+                                    (address.required != '1' && address.formElement != 'multiline' ? 'field col-span-2 lg:col-span-1' : '')">
+                                    <template x-if="address.formElement == 'input' && index != 'region' && index != 'region_id'">
+                                        <div>
+                                            <template x-if="address.dataType != 'hidden'">
+                                                <label class="label block text-sm leading-6 text-gray-900" >
+                                                    <span x-text="address.label"></span>
+                                                    <template x-if="address.required == '1'">
+                                                        <span class="text-required ml-1">*</span>
+                                                    </template>
+                                                </label>
+                                            </template>
+                                            <div class="control mt-1" :class="address.formElement == 'multiline' ? 'flex flex-col lg:flex-row gap-5' : 'block'">
+                                                <input class="input-text block w-full rounded-md border-0 py-2.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
+                                                x-bind:type="address.dataType" x-bind:name="index"
+                                                x-on:input.debounce="onChangeValidateForm($event)"
+                                                x-bind:value="checkShipAddress ? config.customerData.addresses['newship'][index] : ''"
+                                                x-bind:data-validate="JSON.stringify(address.validation)">
+                                            </div>
+                                            <div class="field-error text-base text-error mt-2" x-show="errors[index]" x-text="errors[index]"></div>
+                                        </div>
+                                    </template>
+                                    <template x-if="address.formElement == 'multiline'">
+                                        <div>
+                                            <template x-if="address.dataType != 'hidden'">
+                                                <label class="label block text-sm leading-6 text-gray-900" >
+                                                    <span x-text="address.label"></span>
+                                                    <template x-if="address.required == '1'">
+                                                        <span class="text-required ml-1">*</span>
+                                                    </template>
+                                                </label>
+                                            </template>
+                                            <div class="control mt-1" :class="address.formElement == 'multiline' ? 'flex flex-col lg:flex-row gap-5' : 'block'">
+                                                <template x-for="(i, indx) in addressStreetArray">
+                                                    <div class="block w-full">
+                                                        <input class="input-text block w-full rounded-md border-0 py-2.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
+                                                        x-on:input.debounce="onChangeValidateForm($event)" type="text"
+                                                        x-bind:name="index + '[' + indx + ']'"
+                                                        x-bind:value="checkShipAddress ? config.customerData.addresses['newship'][index][indx] : ''"
+                                                        x-bind:data-validate="(indx == '0') ? JSON.stringify(address.validation) : []">
+                                                        <div class="field-error text-base text-error mt-2" x-show="errors[index + '[' + indx + ']']" x-text="errors[index + '[' + indx + ']']"></div>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <template x-if="address.formElement == 'select' && index == 'country_id'">
+                                        <div>
+                                            <template x-if="address.dataType != 'hidden'">
+                                                <label class="label block text-sm leading-6 text-gray-900" >
+                                                    <span x-text="address.label"></span>
+                                                    <template x-if="address.required == '1'">
+                                                        <span class="text-required ml-1">*</span>
+                                                    </template>
+                                                </label>
+                                            </template>
+                                            <div class="control mt-1" :class="address.formElement == 'multiline' ? 'flex flex-col lg:flex-row gap-5' : 'block'">
+                                                <select class="select"
+                                                x-on:input.debounce="onChangeValidateForm($event)"
+                                                @change="onCountryChange($el.id)" id="country" x-bind:name="index"
+                                                x-bind:data-validate="JSON.stringify(address.validation)">
+                                                    <template x-for="(option, index) in address.options">
+                                                        <option :value="option.value"
+                                                        :selected="defaultAddress.country_id == option.value"
+                                                        x-text="option.label"></option>
+                                                    </template>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <template x-if="isRegionAvailable && index == 'region_id'">
+                                        <div>
+                                            <template x-if="address.dataType == 'hidden'">
+                                                <label class="label block text-sm leading-6 text-gray-900" >
+                                                    <span x-text="address.label"></span>
+                                                    <template x-if="address.required == '1'">
+                                                        <span class="text-required ml-1">*</span>
+                                                    </template>
+                                                </label>
+                                            </template>
+                                            <div class="control mt-1" :class="address.formElement == 'multiline' ? 'flex flex-col lg:flex-row gap-5' : 'block'">
+                                                <select class="select region-select-input"
+                                                x-on:input.debounce="onChangeValidateForm($event)"
+                                                id="region_id" x-bind:name="index"
+                                                x-bind:data-validate="JSON.stringify(address.validation)">
+                                                    <option value>
+                                                        <?= $escaper->escapeHtml(
+                                                            __('Please select a region, state or province.')
+                                                        ) ?>
+                                                    </option>
+                                                    <template x-for="(option, index) in regionArray">
+                                                        <option :value="index"
+                                                        :selected="checkShipAddress ? config.customerData.addresses['newship']['region_id'] == index : ''"
+                                                        x-text="option"></option>
+                                                    </template>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <template x-if="!isRegionAvailable && index == 'region'">
+                                        <div>
+                                            <template x-if="address.dataType != 'hidden'">
+                                                <label class="label block text-sm leading-6 text-gray-900" >
+                                                    <span x-text="address.label"></span>
+                                                    <template x-if="address.required == '1'">
+                                                        <span class="text-required ml-1">*</span>
+                                                    </template>
+                                                </label>
+                                            </template>
+                                            <div class="control mt-1" :class="address.formElement == 'multiline' ? 'flex flex-col lg:flex-row gap-5' : 'block'">
+                                                <input class="input-text block w-full rounded-md border-0 py-2.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6 region-select-input"
+                                                x-on:input.debounce="onChangeValidateForm($event)"
+                                                x-bind:type="address.dataType"
+                                                x-bind:value="checkShipAddress ? config.customerData.addresses['newship'][index] : ''"
+                                                x-bind:name="index"
+                                                x-bind:data-validate="JSON.stringify(address.validation)">
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                                <div class="field choice inline-flex items-center gap-3 col-span-2">
+                                    <input type="checkbox" class="checkbox rounded h-4 w-4 cursor-pointer border-gray-300 text-primary focus:ring-primary" name="save_in_address_book"
+                                    x-bind:checked="checkShipAddress ? config.customerData.addresses['newship']['save_in_address_book'] : false"
+                                    id="shipping-save-in-address-book" />
+                                    <label class="label block text-sm leading-6 text-gray-900 cursor-pointer" for="shipping-save-in-address-book">
+                                        <span><?= $escaper->escapeHtml(__('Save in address book')) ?></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="modal-footer mt-10 flex justify-end items-center gap-5">
+                    <button class="action primary action-save-address primary-btn"
+                    @click.prevent="triggerFormSubmit('co-shipping-form')"
+                    type="button" data-role="action" :disabled="loading">
+                        <span x-show="!loading"><?= $escaper->escapeHtml(__('Ship Here')) ?></span>
+                        <span x-show="loading" class="loader w-6 h-6 border-2 border-t-transparent border-white rounded-full animate-spin" style="display: none;"></span>
+                    </button>
+                    <button class="action secondary action-hide-popup text-sm"
+                    x-on:click="isShipModalOpen=false">
+                        <span><?= $escaper->escapeHtml(__('Cancel')) ?></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,415 @@
+<?php
+/**
+ * ViraXpress - https://www.viraxpress.com
+ *
+ * LICENSE AGREEMENT
+ *
+ * This file is part of the ViraXpress package and is licensed under the ViraXpress license agreement.
+ * You can view the full license at:
+ * https://www.viraxpress.com/license
+ *
+ * By utilizing this file, you agree to comply with the terms outlined in the ViraXpress license.
+ *
+ * DISCLAIMER
+ *
+ * Modifications to this file are discouraged to ensure seamless upgrades and compatibility with future releases.
+ *
+ * @category    ViraXpress
+ * @package     ViraXpress_CheckoutOptimization
+ * @author      ViraXpress
+ * @copyright   © 2024 ViraXpress (https://www.viraxpress.com/)
+ * @license     https://www.viraxpress.com/license
+ */
+
+// Load the PayPal SmartButton block
+/** @var \Magento\Paypal\Block\Express\InContext\SmartButton $paypalSmartButton */
+$paypalSmartButton = $block->getChildBlock('paypal_smart_button');
+if ($paypalSmartButton->getJsInitParams()) {
+    $widget = json_decode($paypalSmartButton->getJsInitParams(), true);
+    $widgetConfig = ($widget['Magento_Paypal/js/in-context/product-express-checkout'])
+        ? json_encode($widget['Magento_Paypal/js/in-context/product-express-checkout'], true) : false;
+    $attributes = [
+        'src' => $widget['Magento_Paypal/js/in-context/product-express-checkout']['clientConfig']['sdkUrl']
+    ];
+    echo /* @noEscape */ $secureRenderer->renderTag('script', $attributes);
+}?>
+<div x-show="step === 'payment'">
+    <!-- Add payment form here -->
+    <div id="payment" class="checkout-payment-method" role="presentation">
+        <div id="checkout-step-payment" class="step-content space-y-10 w-full" data-role="content" role="tabpanel">
+            <form id="co-payment-form" class="form payments" novalidate="novalidate">
+                <input type="hidden" name="form_key" x-value="config.formKey">
+                <fieldset class="fieldset">
+                    <input name="captcha_form_id" type="hidden" value="payment_processing_request">
+                    <div id="checkout-payment-method-load" class="opc-payment">
+                        <div class="items payment-methods">
+                            <div class="payment-group">
+                                <div class="step-title text-xl text-gray-900 pb-5 font-medium flex justify-start items-start gap-5" data-role="title">
+                                    <?= $escaper->escapeHtml(__('Payment Method')) ?>
+                                </div>
+                                <div class="block divide-y divide-gray-200">
+                                    <template x-for="payment_method in paymentMethods.payment_methods">
+                                        <div x-bind:class="`payment-method ${ selectedPaymentMethod === payment_method.code ? '_active' : '' }`" class="py-5">
+                                            <div class="payment-method-title field flex justify-start items-center gap-4 choice">
+                                                <input type="radio" x-model="selectedPaymentMethod" name="payment[method]" class="radio h-4 w-4 cursor-pointer border-gray-300 text-primary focus:ring-primary" :id="payment_method.code" :value="payment_method.code">
+                                                <label class="label block  leading-6 text-gray-900 inline-flex justify-start items-center gap-2" x-bind:for="payment_method.code">
+                                                    <img class="payment-icon"
+                                                    x-show="payment_method.code.includes('paypal_express')"
+                                                    x-bind:src="payPalConf.paymentAcceptanceMarkSrc" />
+                                                    <span x-text="payment_method.title" class="text-base"></span>
+                                                    <a x-bind:href="payPalConf.paymentAcceptanceMarkHref"
+                                                    x-show="payment_method.code.includes('paypal_express')"
+                                                    class="action action-help text-primary underline"
+                                                    @click.prevent="
+                                                        window.open(
+                                                            checkoutConfig.payment.paypalExpress.paymentAcceptanceMarkHref, 
+                                                            'olcwhatispaypal',
+                                                            `toolbar=no, location=no, directories=no, status=no, menubar=no,
+                                                            scrollbars=yes, resizable=yes, left=0, top=0, width=400,
+                                                            height=350`
+                                                        )
+                                                    ">
+                                                        <?= $escaper->escapeHtml(__('What is PayPal?')) ?>
+                                                    </a>
+                                                </label>
+                                            </div>
+                                            <div class="payment-method-content" x-show="selectedPaymentMethod === payment_method.code" x-cloak>
+                                                <template x-if="!payment_method.code.includes('paypal_express')">
+                                                    <div class="payment-method-billing-address my-3 pl-8">
+                                                        <div class="checkout-billing-address">
+                                                            <template x-if="!config.quoteData.is_virtual">
+                                                                <div class="billing-address-same-as-shipping-block field choice flex justify-start items-center gap-2">
+                                                                    <input type="checkbox" name="billing-address-same-as-shipping"
+                                                                    x-model="isAddressSameAsShipping"
+                                                                    x-bind:id="`billing-same-as-shipping-${payment_method.code}`" class="checkbox rounded h-4 w-4 cursor-pointer border-gray-300 text-primary focus:ring-primary">
+                                                                    <label class="label block  leading-6 text-gray-900" 
+                                                                    x-bind:for="`billing-same-as-shipping-${payment_method.code}`">
+                                                                        <span>
+                                                                            <?= $escaper->escapeHtml(__('My billing and shipping address are the same')) ?>
+                                                                        </span>
+                                                                    </label>
+                                                                </div>
+                                                            </template>
+                                                            <template x-if="isBillingFormOpen && selectedPaymentMethod === payment_method.code">
+                                                                <fieldset class="fieldset mt-3">
+                                                                    <template x-if="!guest">
+                                                                        <div class="field field-select-billing">
+                                                                            <label class="label font-medium">
+                                                                                <span>
+                                                                                    <?= $escaper->escapeHtml(__('Billing Address')) ?>
+                                                                                </span>
+                                                                            </label>
+                                                                            <div class="control mt-1 mb-4">
+                                                                                <select class="select" name="billing_address_id" form="co-billing-form" x-model="selectedBillingAddressId">
+                                                                                    <template x-if="config.customerData.addresses">
+                                                                                        <template x-for="adr in config.customerData.addresses">
+                                                                                            <template x-if="adr.inline">
+                                                                                                <option :value="adr.id" x-text="adr.inline"></option>
+                                                                                            </template>
+                                                                                        </template>
+                                                                                    </template>
+                                                                                    <template x-if="config.customerData.addresses">
+                                                                                        <option :value="0">
+                                                                                            <?= $escaper->escapeHtml(__('New Address')) ?>
+                                                                                        </option>
+                                                                                    </template>
+                                                                                </select>
+                                                                            </div>
+                                                                        </div>
+                                                                    </template>
+                                                                    <template x-if="selectedBillingAddressId == 0">
+                                                                        <div class="billing-address-form">
+                                                                            <form id="co-billing-form" data-hasrequired="* Required Fields">
+                                                                                <fieldset class="fieldset address grid grid-cols-2 gap-5" data-form="billing-new-address">
+                                                                                    <template x-for="(address, index) in addressFormFields">
+                                                                                        <div x-bind:class="`address-form-fields ${index}-field ` + 
+                                                                                            (address.required == '1' ? '_required col-span-2 lg:col-span-1' : '') +
+                                                                                            (address.formElement == 'multiline' ? 'field col-span-2 lg:col-span-2' : '') +
+                                                                                            (address.required != '1' && address.formElement != 'multiline' ? 'field col-span-2 lg:col-span-1' : '')">
+                                                                                            <template x-if="address.formElement == 'input' && index != 'region' && index != 'region_id'">
+                                                                                                <div>
+                                                                                                    <template x-if="address.dataType != 'hidden'">
+                                                                                                        <label class="label block  leading-6 text-gray-900">
+                                                                                                            <span x-text="address.label"></span>
+                                                                                                            <span class="text-required ml-1">*</span>
+                                                                                                        </label>
+                                                                                                    </template>
+                                                                                                    <div class="control mt-1" :class="address.formElement == 'multiline' ? 'flex flex-col lg:flex-row gap-5' : 'block'">
+                                                                                                        <input
+                                                                                                        class="input-text w-full block rounded-md border-0 py-2.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
+                                                                                                        x-bind:type="address.dataType"
+                                                                                                        x-bind:id="index"
+                                                                                                        x-bind:name="index"
+                                                                                                        x-on:input.debounce="onChangeValidateForm($event)"
+                                                                                                        x-bind:value="selectedBillingAddressId != 0 && defBillAdr ? defBillAdr[index] : ''"
+                                                                                                        x-bind:data-validate="JSON.stringify(address.validation)">
+                                                                                                    </div>
+                                                                                                    <div class="field-error text-base text-error mt-2" x-show="errors[index]" x-text="errors[index]"></div>
+                                                                                                </div>
+                                                                                            </template>
+                                                                                            <template x-if="address.formElement == 'multiline'">
+                                                                                                <div>
+                                                                                                    <template x-if="address.dataType != 'hidden'">
+                                                                                                        <label class="label block  leading-6 text-gray-900">
+                                                                                                            <span x-text="address.label"></span>
+                                                                                                            <span class="text-required ml-1">*</span>
+                                                                                                        </label>
+                                                                                                    </template>
+                                                                                                    <div class="control mt-1" :class="address.formElement == 'multiline' ? 'flex flex-col lg:flex-row gap-5' : 'block'">
+                                                                                                        <template x-for="(i, indx) in addressStreetArray">
+                                                                                                            <div class="block w-full">
+                                                                                                                <input
+                                                                                                                class="input-text w-full block rounded-md border-0 py-2.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
+                                                                                                                x-on:input.debounce="onChangeValidateForm($event)"
+                                                                                                                type="text"
+                                                                                                                x-bind:value="selectedBillingAddressId != 0 && defBillAdr ? defBillAdr[index][indx] : ''"
+                                                                                                                x-bind:name="index + '[' + indx + ']'"
+                                                                                                                x-bind:data-validate="(indx == '0') ? JSON.stringify(address.validation) : []">
+                                                                                                                <div class="field-error text-base text-error mt-2" x-show="errors[index + '[' + indx + ']']" x-text="errors[index + '[' + indx + ']']"></div>
+                                                                                                            </div>
+                                                                                                        </template>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </template>
+                                                                                            <template x-if="address.formElement == 'select' && index == 'country_id'">
+                                                                                                <div>
+                                                                                                    <template x-if="address.dataType != 'hidden'">
+                                                                                                        <label class="label block  leading-6 text-gray-900">
+                                                                                                            <span x-text="address.label"></span>
+                                                                                                            <span class="text-required ml-1">*</span>
+                                                                                                        </label>
+                                                                                                    </template>
+                                                                                                    <div class="control mt-1" :class="address.formElement == 'multiline' ? 'flex flex-col lg:flex-row gap-5' : 'block'">
+                                                                                                        <select
+                                                                                                        class="select"
+                                                                                                        x-on:input.debounce="onChangeValidateForm($event)"
+                                                                                                        @change="onCountryChange($el.id)"
+                                                                                                        x-bind:id="guest ? 'bill-guest-country' : 'country'"
+                                                                                                        x-bind:name="index"
+                                                                                                        x-bind:data-validate="JSON.stringify(address.validation)">
+                                                                                                            <template x-for="(option, index) in address.options">
+                                                                                                                <option
+                                                                                                                :value="option.value"
+                                                                                                                :selected="defaultAddress.country_id === option.value"
+                                                                                                                x-text="option.label"></option>
+                                                                                                            </template>
+                                                                                                        </select>
+                                                                                                    </div>
+                                                                                                    <div class="field-error text-base text-error mt-2" x-show="errors[index]" x-text="errors[index]"></div>
+                                                                                                </div>
+                                                                                            </template>
+                                                                                            <template x-if="isRegionAvailable && index == 'region_id'">
+                                                                                                <div>
+                                                                                                    <template x-if="address.dataType == 'hidden'">
+                                                                                                        <label class="label block  text-sm leading-6 text-gray-900" >
+                                                                                                            <span x-text="address.label"></span>
+                                                                                                            <template x-if="address.required == '1'">
+                                                                                                                <span class="text-required ml-1">*</span>
+                                                                                                            </template>
+                                                                                                        </label>
+                                                                                                    </template>
+                                                                                                    <div class="control mt-1" :class="address.formElement == 'multiline' ? 'flex flex-col lg:flex-row gap-5' : 'block'">
+                                                                                                        <select
+                                                                                                        class="select region-select-input"
+                                                                                                        x-on:input.debounce="onChangeValidateForm($event)"
+                                                                                                        id="region_id"
+                                                                                                        x-bind:name="index"
+                                                                                                        x-bind:data-validate="JSON.stringify(address.validation)">
+                                                                                                            <option value>
+                                                                                                                <?= $escaper->escapeHtml(
+                                                                                                                    __('Please select a region, state or province.')
+                                                                                                                ) ?>
+                                                                                                            </option>
+                                                                                                            <template x-for="(option, index) in regionArray">
+                                                                                                                <option :value="index"
+                                                                                                                x-bind:selected = "selectedBillingAddressId != 0 && defBillAdr ? defBillAdr['region_id'] === index : ''"
+                                                                                                                x-text="option"></option>
+                                                                                                            </template>
+                                                                                                        </select>
+                                                                                                    </div>
+                                                                                                    <div class="field-error text-base text-error mt-2" x-show="errors[index]" x-text="errors[index]"></div>
+                                                                                                </div>
+                                                                                            </template>
+                                                                                            <template x-if="!isRegionAvailable && index == 'region'">
+                                                                                                <div>
+                                                                                                    <template x-if="address.dataType != 'hidden'">
+                                                                                                        <label class="label block  text-sm leading-6 text-gray-900" >
+                                                                                                            <span x-text="address.label"></span>
+                                                                                                            <template x-if="address.required == '1'">
+                                                                                                                <span class="text-required ml-1">*</span>
+                                                                                                            </template>
+                                                                                                        </label>
+                                                                                                    </template>
+                                                                                                    <div class="control mt-1" :class="address.formElement == 'multiline' ? 'flex flex-col lg:flex-row gap-5' : 'block'">
+                                                                                                        <input
+                                                                                                        class="input-text region-select-input input-text w-full block rounded-md border-0 py-2.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
+                                                                                                        x-on:input.debounce="onChangeValidateForm($event)"
+                                                                                                        x-bind:type="address.dataType"
+                                                                                                        x-bind:value="selectedBillingAddressId != 0 && defBillAdr ? defBillAdr[index] : ''"
+                                                                                                        x-bind:id="index"
+                                                                                                        x-bind:name="index"
+                                                                                                        x-bind:data-validate="JSON.stringify(address.validation)">
+                                                                                                    </div>
+                                                                                                    <div class="field-error text-base text-error mt-2" x-show="errors[index]" x-text="errors[index]"></div>
+                                                                                                </div>
+                                                                                            </template>
+                                                                                        </div>
+                                                                                    </template>
+                                                                                    <div class="field choice mb-5 col-span-2" x-show="!guest">
+                                                                                        <input type="checkbox" class="checkbox rounded h-4 w-4 cursor-pointer border-gray-300 text-primary focus:ring-primary"
+                                                                                        x-bind:checked="selectedBillingAddressId != 0 && defBillAdr ? defBillAdr['save_in_address_book'] : false"
+                                                                                        x-bind:id="`billsave-in-adr-${payment_method.code}`" />
+                                                                                        <label class="label inline-block ml-2 cursor-pointer leading-6 text-gray-900"
+                                                                                        x-bind:for="`billsave-in-adr-${payment_method.code}`">
+                                                                                            <span>
+                                                                                                <?= $escaper->escapeHtml(__('Save in address book')) ?>
+                                                                                            </span>
+                                                                                        </label>
+                                                                                    </div>
+                                                                                </fieldset>
+                                                                            </form>
+                                                                        </div>
+                                                                    </template>
+                                                                    <div class="actions-toolbar mt-5">
+                                                                        <div class="primary flex justify-start items-center gap-5">
+                                                                            <button class="action action-update primary-btn"
+                                                                            @click.prevent="triggerFormSubmit('co-billing-form')"
+                                                                            type="button">
+                                                                                <span><?= $escaper->escapeHtml(__('Update'))?></span>
+                                                                            </button>
+                                                                            <button class="action action-cancel"
+                                                                            @click="cancelAddressSelection" type="button">
+                                                                                <?= $escaper->escapeHtml(__('Cancel'))?>
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </fieldset>
+                                                            </template>
+                                                            <template x-if="!isBillingFormOpen">
+                                                                <div class="billing-address-details mt-3 pl-6">
+                                                                    <div class="space-y-3">
+                                                                        <p x-text="`${defBillAdr.firstname} ${defBillAdr.lastname}`"></p>
+                                                                        <p x-text="defBillAdr.street.join(', ')"></p>
+                                                                        <p x-text="`${defBillAdr.city}, ${(defBillAdr.region.region) ? defBillAdr.region.region : defBillAdr.region}, ${defBillAdr.postcode}`"></p>
+                                                                        <p x-text="defBillAdr.country_id"></p>
+                                                                        <p x-text="defBillAdr.telephone"></p>
+                                                                    </div>
+                                                                    <template x-if="!isAddressSameAsShipping">
+                                                                        <button type="button" class="action action-edit-address text-green-600 mt-5"
+                                                                        x-on:click="isBillingFormOpen = true">
+                                                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit">
+                                                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                                                            </svg>
+                                                                        </button>
+                                                                    </template>
+                                                                </div>
+                                                            </template>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                                <fieldset class="fieldset" x-show="payment_method.code.includes('paypal_express') && !payPalConf.isContextCheckout" x-bind:id="`payment_form_${payment_method.code}`">
+                                                    <div class="payment-method-note mt-5 font-semibold">
+                                                        <?= $escaper->escapeHtml(
+                                                            __('You will be redirected to the PayPal website.')
+                                                        ) ?>
+                                                    </div>
+                                                </fieldset>
+                                                <div class="actions-toolbar">
+                                                    <div class="primary flex justify-end items-center gap-5">
+                                                        <button :disabled="loading || isBillingFormOpen"
+                                                        class="action primary checkout place-order primary-btn text-base mt-8 lg:mt-0"
+                                                        x-show="payment_method.code.includes('paypal_express') && !payPalConf.isContextCheckout"
+                                                        type="button" title="Continue to PayPal"
+                                                        @click="continueToPayPal()">
+                                                            <span x-show="!loading">
+                                                                <?= $escaper->escapeHtml(__('Continue to PayPal')) ?>
+                                                            </span>
+                                                            <span x-show="loading" x-cloak class="loader w-6 h-6 border-2 border-t-transparent border-white rounded-full animate-spin"></span>
+                                                        </button>
+                                                        <template x-if="payment_method.code.includes('paypal_express') && payPalConf.isContextCheckout">
+                                                            <div id="paypal-express-in-context-button"
+                                                            data-widget='<?= /* @noEscape */ $widgetConfig ?>'>
+                                                                <div class="paypal paypal-buttons-context-iframe"></div>
+                                                            </div>
+                                                        </template>
+                                                        <script>
+                                                            async function authorizePayment(onAuthorizeUrl, data, quoteId) {
+                                                                const params = new URLSearchParams({
+                                                                    paymentToken: data.orderID || '',
+                                                                    payerId: data.payerID || '',
+                                                                    quoteId: quoteId || '',
+                                                                    form_key: window.checkoutConfig.formKey
+                                                                });
+                                                                const response = await fetch(onAuthorizeUrl, {
+                                                                    headers: {
+                                                                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                                                                        'X-Requested-With': 'XMLHttpRequest'
+                                                                    },
+                                                                    method: 'POST',
+                                                                    body: params,
+                                                                    credentials: 'include'
+                                                                });
+                                                                const result = await response.json();
+                                                                if (!response.ok || !result.success) throw new Error(result.error_message || 'Error during authorization');
+                                                                return result.redirectUrl;
+                                                            }
+                                                        </script>
+                                                        <button :disabled="loading || isBillingFormOpen"
+                                                        class="action primary checkout place-order primary-btn text-base w-full lg:w-max mt-10"
+                                                        x-show="!payment_method.code.includes('paypal_express')"
+                                                        type="button" title="Place Order" @click="placeOrder()">
+                                                            <span x-show="!loading">
+                                                                <?= $escaper->escapeHtml(__('Place Order')) ?>
+                                                            </span>
+                                                            <span x-show="loading" class="loader w-6 h-6 border-2 border-t-transparent border-white rounded-full animate-spin"></span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+            </form>
+            <div x-bind:class="`payment-option opc-payment-additional discount-code ${
+                showDetails == true ? '_active' : ''
+            }`"
+            data-collapsible="true" role="tablist">
+                <div class="payment-option-title field choice pb-5 " data-role="title" role="tab"
+                aria-selected="true" aria-expanded="true" tabindex="0">
+                    <span class="action action-toggle text-xl text-gray-900 font-medium" id="block-discount-heading" role="heading" aria-level="2">
+                        <span><?= $escaper->escapeHtml(__('Apply Discount Code')) ?></span>
+                    </span>
+                </div>
+                <div class="payment-option-content" data-role="content" role="tabpanel" aria-hidden="false">
+                    <form class="form form-discount" id="discount-form" @submit.prevent="applyDiscount()">
+                        <input type="hidden" name="form_key" x-value="config.formKey">
+                        <div class="payment-option-inner">
+                            <div class="field">
+                                <label class="label block  leading-6 text-gray-900 text-sm" for="discount-code">
+                                    <span><?= $escaper->escapeHtml(__('Enter discount code')) ?></span>
+                                </label>
+                                <div class="control mt-1 flex flex-col lg:flex-row justify-start items-center gap-3 lg:gap-5">
+                                    <input class="input-text w-full lg:w-max block rounded-md border-0 py-2.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6" type="text" id="discount-code" name="discount_code"
+                                    x-bind:value="couponCode" x-bind:disabled="couponCode ? true : false"
+                                    placeholder="<?= $escaper->escapeHtml(__('Enter discount code')) ?>">
+
+                                    <button class="action action-apply primary-btn w-full lg:w-max" :class="discountCode ? 'bg-error focus:ring-error' : 'bg-primary'" id="coupon-code"
+                                        x-bind:value="discountCode ? 'Cancel Coupon' : 'Apply Coupon'">
+                                        <span>
+                                            <span x-text="discountCode ? 'Cancel Coupon ' : 'Apply Coupon'"></span>
+                                        </span>
+                                </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
