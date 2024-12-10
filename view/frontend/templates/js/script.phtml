@@ -151,7 +151,9 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
                         return;
                     }
                 }
-                if (!this.guest && this.config.customerData.addresses.length === 0) this.preloadCountry();
+                if (!this.guest && this.config.customerData.addresses.length === 0) {
+                    var inter = setInterval(() => { clearInterval(inter); this.onCountryChange('country');}, 1000);
+                }
                 this.setPaymentInformation(method);
                 this.getTotals();
                 if (paypalIframe = document.querySelector('.paypal-buttons-context-iframe')) paypalIframe.innerHTML = '';
@@ -181,7 +183,9 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
             },
             /* Load country to check region is available */
             onCountryChange(id) {
-                this.checkShipAddress = (Object.keys(window.checkoutConfig.customerData).length > 0 && window.checkoutConfig.customerData.addresses['newship']) ? true : false;
+                if (this.config.customerData.addresses && Object.keys(this.config.customerData.addresses).length != 0) {
+                    this.checkShipAddress = (Object.keys(window.checkoutConfig.customerData).length > 0 && window.checkoutConfig.customerData.addresses['newship']) ? true : false;
+                }
                 /* this.defBillAdr = Object.keys(window.checkoutConfig.customerData).length > 0 && window.checkoutConfig.customerData.addresses; */
                 var countryId = document.getElementById(id);
                 if (countryId) {
@@ -364,7 +368,7 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
                         formData["address"] = billingFormData;
                     }
                 } else {
-                    const selectedAddress = this.config.customerData.addresses[id];
+                    const selectedAddress = (this.config.customerData.addresses.length === 0) ? this.guestShipAddr : this.config.customerData.addresses[id];
                     this.defBillAdr = selectedAddress;
                     formData["address"] = this.formatAddress(selectedAddress);
                 }
