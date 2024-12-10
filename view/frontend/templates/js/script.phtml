@@ -88,6 +88,7 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
                 this.$watch('selectedPaymentMethod', (value) => { if (value) this.updatePaymentMethod(value) });
                 this.$watch('isAddressSameAsShipping', (value) => { this.toggleBillingFormVisibility(value) });
                 this.$watch('isBillingFormOpen', (value) => { if (value) this.onCountryChange('bill-guest-country');});
+                this.$watch('step', (value) => { if (value === "payment") this.checkCouponField();});
                 if (this.guest) var inter = setInterval(() => { clearInterval(inter); this.onCountryChange('ship-guest-country'); this.fetchPreShippingMethods(this.guestShip);}, 1000);
                 if (!this.guest && this.config.customerData.addresses.length === 0) this.preloadCountry();
                 if (this.config.quoteData.is_virtual) {
@@ -575,7 +576,7 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
                             return;
                         }
                         if (data) {
-                            this.discountCode = true;
+                            this.discountCode = (couponField && couponField.value) ? true : false;
                             const warningDiv = document.createElement('div');
                             warningDiv.textContent = (this.couponCode == null) ? "Coupon Cancelled!" : "Coupon Applied!";
                             warningDiv.id = 'coupon-method-success';
@@ -722,7 +723,7 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
                         this.guestShipAddr = formDatas;
                         this.defBillAdr = formDatas;
                         this.selectedAddressId = "newship";
-                        if (!this.guest) {
+                        if (this.guest) {
                             const errorElement = document.getElementById("customer-email-error");
                             if (errorElement && errorElement.textContent.trim() !== "") {
                                 this.loading = false;
@@ -730,14 +731,14 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
                                 errorElement.focus();
                                 return;
                             } else {
-                                document.querySelector('[data-role="opc-continue"]').addEventListener('click', () => {
-                                    const emailElement = document.getElementById("customer-email");
-                                    if (emailElement.value == '') {
-                                        emailElement.dispatchEvent(new Event('change', { 'bubbles': true }));
-                                        emailElement.scrollIntoView({ behavior: "smooth", block: "center" });
-                                        emailElement.focus();
-                                    }
-                                });
+                                const emailElement = document.getElementById("customer-email");
+                                if (emailElement.value == '') {
+                                    this.loading = false;
+                                    emailElement.dispatchEvent(new Event('change', { 'bubbles': true }));
+                                    emailElement.scrollIntoView({ behavior: "smooth", block: "center" });
+                                    emailElement.focus();
+                                    return;
+                                }
                             }
                         }
                         this.$dispatch('set-guestShipAddr', this.guestShipAddr)
