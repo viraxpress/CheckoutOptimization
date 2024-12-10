@@ -92,7 +92,7 @@ if ($paypalSmartButton->getJsInitParams()) {
                                                             </template>
                                                             <template x-if="isBillingFormOpen && selectedPaymentMethod === payment_method.code">
                                                                 <fieldset class="fieldset mt-3">
-                                                                    <template x-if="!guest">
+                                                                    <template x-if="!guest && config.customerData.addresses.length != 0">
                                                                         <div class="field field-select-billing">
                                                                             <label class="label font-medium">
                                                                                 <span>
@@ -131,7 +131,9 @@ if ($paypalSmartButton->getJsInitParams()) {
                                                                                                     <template x-if="address.dataType != 'hidden'">
                                                                                                         <label class="label block  leading-6 text-gray-900">
                                                                                                             <span x-text="address.label"></span>
-                                                                                                            <span class="text-required ml-1">*</span>
+                                                                                                            <template x-if="address.required == '1'">
+                                                                                                                <span class="text-required ml-1">*</span>
+                                                                                                            </template>
                                                                                                         </label>
                                                                                                     </template>
                                                                                                     <div class="control mt-1" :class="address.formElement == 'multiline' ? 'flex flex-col lg:flex-row gap-5' : 'block'">
@@ -152,7 +154,9 @@ if ($paypalSmartButton->getJsInitParams()) {
                                                                                                     <template x-if="address.dataType != 'hidden'">
                                                                                                         <label class="label block  leading-6 text-gray-900">
                                                                                                             <span x-text="address.label"></span>
-                                                                                                            <span class="text-required ml-1">*</span>
+                                                                                                            <template x-if="address.required == '1'">
+                                                                                                                <span class="text-required ml-1">*</span>
+                                                                                                            </template>
                                                                                                         </label>
                                                                                                     </template>
                                                                                                     <div class="control mt-1" :class="address.formElement == 'multiline' ? 'flex flex-col lg:flex-row gap-5' : 'block'">
@@ -176,7 +180,9 @@ if ($paypalSmartButton->getJsInitParams()) {
                                                                                                     <template x-if="address.dataType != 'hidden'">
                                                                                                         <label class="label block  leading-6 text-gray-900">
                                                                                                             <span x-text="address.label"></span>
-                                                                                                            <span class="text-required ml-1">*</span>
+                                                                                                            <template x-if="address.required == '1'">
+                                                                                                                <span class="text-required ml-1">*</span>
+                                                                                                            </template>
                                                                                                         </label>
                                                                                                     </template>
                                                                                                     <div class="control mt-1" :class="address.formElement == 'multiline' ? 'flex flex-col lg:flex-row gap-5' : 'block'">
@@ -390,9 +396,6 @@ if ($paypalSmartButton->getJsInitParams()) {
                         <input type="hidden" name="form_key" x-value="config.formKey">
                         <div class="payment-option-inner">
                             <div class="field">
-                                <label class="label block  leading-6 text-gray-900 text-sm" for="discount-code">
-                                    <span><?= $escaper->escapeHtml(__('Enter discount code')) ?></span>
-                                </label>
                                 <div class="control mt-1 flex flex-col lg:flex-row justify-start items-center gap-3 lg:gap-5">
                                     <input class="input-text w-full lg:w-max block rounded-md border-0 py-2.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6" type="text" id="discount-code" name="discount_code"
                                     x-bind:value="couponCode" x-bind:disabled="couponCode ? true : false"
