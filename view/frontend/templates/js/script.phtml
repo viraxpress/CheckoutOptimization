@@ -109,7 +109,7 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
                 var inter = setInterval(() => {
                     clearInterval(inter);
                     this.onCountryChange('country');
-                    this.fetchPreShippingMethods(this.guestShip);
+                    if (this.step == 'shipping') this.fetchPreShippingMethods(this.guestShip);
                 }, 1000);
             },
             checkIsVirtualForEmail() {
@@ -417,7 +417,7 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
                         this.guestShip[element.name] = element.value;
                         if (this.guestShip['region_id'] == "") delete this.guestShip['region_id'];
                         delete this.guestShip['id'];
-                        this.fetchPreShippingMethods(this.guestShip);
+                        if (this.step == 'shipping') this.fetchPreShippingMethods(this.guestShip);
                     }
                     let shipAddrData = {};
                     this.addr[element.name] = element.value;
@@ -597,7 +597,7 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
                             if (warningDiv) setTimeout(() => warningDiv.remove(), 5000);
                             if (this.guest || this.config.customerData.addresses.length === 0) {
                                 delete this.guestShipAddr['id'];
-                                this.fetchPreShippingMethods(this.guestShipAddr);
+                                if (this.step == 'shipping') this.fetchPreShippingMethods(this.guestShipAddr);
                             } else {
                                 this.fetchShippingMethods(this.selectedAddressId);
                             }
