@@ -178,7 +178,14 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
                     (!this.guest) ? this.isBillingSameAsShipping(this.selectedAddressId) : this.defBillAdr = this.guestShipAddr;
                 } else {
                     this.isBillingFormOpen = true;
-                    this.selectedBillingAddressId = (this.guest || this.config.customerData.addresses.length === 0) ? 0 : null;
+                    if (this.guest) {
+                        this.selectedBillingAddressId = (this.guest) ? 0 : null;
+                    } else if (!this.guest && this.config.customerData.addresses.length === 0) {
+                        this.selectedBillingAddressId = 0;
+                        this.isBillingFormOpen = true;
+                        this.defBillAdr = this.guestShipAddr;
+                        this.preloadCountry();
+                    }
                 }
             },
             /* Load country to check region is available */
