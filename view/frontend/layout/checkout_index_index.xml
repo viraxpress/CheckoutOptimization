@@ -24,17 +24,11 @@
 -->
 <page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" layout="checkout" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
     <body>    
-
-        <referenceBlock name="page.main.title" remove="true" />
-        <referenceBlock name="copyright" remove="true"/>
-
-
         <referenceBlock name="logo">
-            <action method="setTemplate">
+            <action method="setTemplate" ifconfig="viraxpress_config/checkout_theme_switcher/enable_vira_checkout">
                 <argument name="template" xsi:type="string">ViraXpress_CheckoutOptimization::html/header/logo.phtml</argument>
             </action>
         </referenceBlock>
-
         <referenceBlock name="checkout.root">
             <action method="setTemplate" ifconfig="viraxpress_config/checkout_theme_switcher/enable_vira_checkout">
                 <argument name="template" xsi:type="string">ViraXpress_CheckoutOptimization::onecheckout.phtml</argument>

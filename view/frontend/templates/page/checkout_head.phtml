@@ -42,3 +42,25 @@ $stylesheets = [
         ]
     ); ?>
 <?php endforeach; ?>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const assetsToRemove = [
+            'mage/calendar.css',
+            'jquery/uppy/dist/uppy-custom.css',
+            'css/styles-m.css',
+            'css/styles-l.css',
+            'css/print.css',
+            'fonts/opensans/light/opensans-300.woff2',
+            'fonts/opensans/regular/opensans-400.woff2',
+            'fonts/opensans/semibold/opensans-600.woff2',
+            'fonts/opensans/bold/opensans-700.woff2',
+            'fonts/Luma-Icons.woff2',
+            'requirejs/require.js'
+        ];
+        
+        assetsToRemove.forEach(asset => {
+            const elements = document.querySelectorAll(`[href*="${asset}"], [src*="${asset}"]`);
+            elements.forEach(el => el.remove());
+        });
+    });
+</script>

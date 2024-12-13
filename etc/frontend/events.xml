@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<!--
+<!-- 
 /**
  * ViraXpress - https://www.viraxpress.com
  *
@@ -21,11 +21,9 @@
  * @copyright   © 2024 ViraXpress (https://www.viraxpress.com/)
  * @license     https://www.viraxpress.com/license
  */
--->
-<page layout="3columns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
-    <body>
-        <referenceContainer name="before.body.end">
-            <block class="Magento\Framework\View\Element\Template" ifconfig="viraxpress_config/checkout_theme_switcher/enable_vira_checkout" name="page-scripts" template="ViraXpress_CheckoutOptimization::page/js/scripts.phtml"/>
-        </referenceContainer>
-    </body>
-</page>
+ -->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Event/etc/events.xsd">
+    <event name="layout_generate_blocks_after">
+        <observer name="remove_block" instance="ViraXpress\CheckoutOptimization\Observer\RemoveBlockForTheme" />
+    </event>
+</config>
