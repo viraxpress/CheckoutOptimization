@@ -23,29 +23,10 @@
 <page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
-        <remove src="mage/calendar.css"/>
-        <remove src="jquery/uppy/dist/uppy-custom.css"/>
-        <remove src="css/styles-m.css"/>
-        <remove src="css/styles-l.css"/>
-        <remove src="css/print.css"/>
-        <remove src="fonts/opensans/light/opensans-300.woff2"/>
-        <remove src="fonts/opensans/regular/opensans-400.woff2"/>
-        <remove src="fonts/opensans/semibold/opensans-600.woff2"/>
-        <remove src="fonts/opensans/bold/opensans-700.woff2"/>
-        <remove src="fonts/Luma-Icons.woff2"/>        
-
-        <remove src="requirejs/require.js"/>
     </head>
     <body>
-        <referenceBlock name="requirejs-config" remove="true"/>
-        <referenceBlock name="cookie-status-check" remove="true"/>
         <referenceBlock name="head.additional">
-             <block name="checkout_head" class="ViraXpress\Theme\Block\Config" template="ViraXpress_CheckoutOptimization::page/checkout_head.phtml"/>
+             <block name="checkout_head" class="ViraXpress\Theme\Block\Config" ifconfig="viraxpress_config/checkout_theme_switcher/enable_vira_checkout" template="ViraXpress_CheckoutOptimization::page/checkout_head.phtml"/>
         </referenceBlock>
-
-        <!-- <referenceContainer name="after.body.start">
-            <block class="Magento\Framework\View\Element\Js\Components" name="head.components" as="components" template="Magento_Theme::js/components.phtml" before="-"/>
-            <block class="Magento\Framework\View\Element\Template" name="cookie-status-check" as="cookie-status" template="Magento_Theme::js/cookie_status.phtml" />
-        </referenceContainer> -->
     </body>
 </page>
