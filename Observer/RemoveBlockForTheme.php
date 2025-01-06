@@ -75,7 +75,14 @@ class RemoveBlockForTheme implements ObserverInterface
         $isEnabled = $this->scopeConfig->getValue('viraxpress_config/checkout_theme_switcher/enable_vira_checkout', ScopeInterface::SCOPE_STORE, $this->getStoreId());
         $action = $this->request->getFullActionName();
         if ($isEnabled && $action == 'checkout_index_index') {
-            $blockList = ['requirejs-config', 'cookie-status-check', 'page.main.title', 'copyright', 'authentication-popup'];
+            $blockList = ['requirejs-config', 'cookie-status-check', 'page.main.title', 'copyright', 'authentication-popup', 'pagebuilder.widget.initializer', 'frontend-storage-manager', 'customer.section.config', 'customer.data.invalidation.rules', 'customer.customer.data', 'pageCache', 'form_key_provider'];
+            foreach ($blockList as $list) {
+                $block = $layout->getBlock($list);
+                if ($block) $layout->unsetElement($list);
+            }
+        }
+        if ($isEnabled && $action != 'checkout_index_index') {
+            $blockList = ['checkout_head'];
             foreach ($blockList as $list) {
                 $block = $layout->getBlock($list);
                 if ($block) $layout->unsetElement($list);

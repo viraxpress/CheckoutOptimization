@@ -21,8 +21,9 @@
 ?>
 
 <?php
+$themePath = $block->checkThemePath();
 $baseUrl = $escaper->escapeUrl($block->getBaseUrl());
-$customPath = 'vx/ViraXpress/frontend/web/';
+$customPath = 'vx/'.$themePath.'/web/';
 $mediaUrl = $baseUrl . $escaper->escapeUrl($customPath);
 // Define assets
 $stylesheets = [
@@ -55,7 +56,8 @@ $stylesheets = [
             'fonts/opensans/semibold/opensans-600.woff2',
             'fonts/opensans/bold/opensans-700.woff2',
             'fonts/Luma-Icons.woff2',
-            'requirejs/require.js'
+            'requirejs/require.js',
+            'requirejs-config.js'
         ];
         
         assetsToRemove.forEach(asset => {
