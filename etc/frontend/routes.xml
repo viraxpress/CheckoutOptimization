@@ -24,7 +24,7 @@
  -->
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:App/etc/routes.xsd">
     <router id="standard">
-        <route id="checkoutoptimization" frontName="checkoutoptimization">
+        <route id="onepage" frontName="onepage">
             <module name="ViraXpress_CheckoutOptimization" />
         </route>
     </router>

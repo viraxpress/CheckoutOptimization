@@ -64,5 +64,13 @@ $stylesheets = [
             const elements = document.querySelectorAll(`[href*="${asset}"], [src*="${asset}"]`);
             elements.forEach(el => el.remove());
         });
+
+        const scripts = document.querySelectorAll('script');
+
+        scripts.forEach(script => {
+            if (script.innerHTML.includes('require.config')) {
+                script.parentNode.removeChild(script);
+            }
+        });
     });
 </script>
