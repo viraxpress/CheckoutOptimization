@@ -196,7 +196,7 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
                 /* this.defBillAdr = Object.keys(window.checkoutConfig.customerData).length > 0 && window.checkoutConfig.customerData.addresses; */
                 var countryId = document.getElementById(id);
                 if (countryId) {
-                    var url = "<?= $escaper->escapeUrl($block->getBaseUrl()) ?>checkoutoptimization/address/state";
+                    var url = "<?= $escaper->escapeUrl($block->getBaseUrl()) ?>onepage/address/state";
                     fetch(url+ '?event_country=' + encodeURIComponent(countryId.value))
                     .then((response) => { if (response.ok) return response.json();})
                     .then((data) => { 

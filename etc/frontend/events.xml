@@ -26,4 +26,7 @@
     <event name="layout_generate_blocks_after">
         <observer name="remove_block" instance="ViraXpress\CheckoutOptimization\Observer\RemoveBlockForTheme" />
     </event>
+    <event name="controller_action_predispatch">
+        <observer name="theme_switch_observer" instance="ViraXpress\CheckoutOptimization\Observer\CheckoutRedirect"/>
+    </event>
 </config>

@@ -24,4 +24,5 @@
  -->
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
     <preference for="ViraXpress\CheckoutOptimization\Api\CustomerTokenManagementInterface" type="ViraXpress\CheckoutOptimization\Model\CustomerTokenManagement"/>
+    <preference for="Magento\RequireJs\Block\Html\Head\Config" type="ViraXpress\CheckoutOptimization\Block\RequireJsRemove" />
 </config>
