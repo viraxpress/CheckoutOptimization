@@ -50,9 +50,7 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
             config: window.checkoutConfig,
             storeCode: '<?= $escaper->escapeHtmlAttr($viewModel->getCurrentStoreCode()) ?>',
             defaultAddress: {
-                country_id: window.checkoutConfig.defaultCountryId,
-                region_id: window.checkoutConfig.defaultRegionId,
-                postcode: window.checkoutConfig.defaultPostcode,
+                country_id: '<?= $escaper->escapeHtmlAttr($viewModel->getCountryByWebsite()) ?>',
             },
             isShipModalOpen: false,
             addressFormFields: <?= /* @noEscape */ json_encode($addressFormFields) ?>,
@@ -64,10 +62,10 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
             couponCode: null,
             checkShipAddress: false,
             errors: {},
-            payPalConf: window.checkoutConfig.payment.paypalExpress,
+            payPalConf: (window.checkoutConfig.payment) ? window.checkoutConfig.payment.paypalExpress : '',
             guestShipAddr: null,
             guestShip: {
-                country_id: window.checkoutConfig.defaultCountryId
+                country_id: '<?= $escaper->escapeHtmlAttr($viewModel->getCountryByWebsite()) ?>'
             },
             addr: {},
             isBillingFormOpen: false,
@@ -502,7 +500,7 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
                         this.displayWarning(data.message, '#checkout-shipping-method-load', 'shipping-method-warning', false);
                         return;
                     }
-                    if (this.config.payment.paypalExpress.isContextCheckout) data.payment_methods = data.payment_methods.filter(method => method.code !== 'paypal_express_bml');
+                    if (this.config.payment && this.config.payment.paypalExpress.isContextCheckout) data.payment_methods = data.payment_methods.filter(method => method.code !== 'paypal_express_bml');
                     this.paymentMethods = data;
                     this.step = "payment";
                     this.loading = false;
@@ -626,7 +624,7 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
                         this.displayWarning(data.message, '.payment-option-inner', 'coupon-method-warning', false);
                         return;
                     }
-                    if (this.config.payment.paypalExpress.isContextCheckout) data.payment_methods = data.payment_methods.filter(method => method.code !== 'paypal_express_bml');
+                    if (this.config.payment && this.config.payment.paypalExpress.isContextCheckout) data.payment_methods = data.payment_methods.filter(method => method.code !== 'paypal_express_bml');
                     this.paymentMethods = data;
                     this.step = "payment";
                     this.loading = false;
@@ -890,7 +888,7 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
                         this.displayWarning(data.message, '.payment-method', 'payment-method-warning');
                         return;
                     }
-                    if (!this.config.payment.paypalExpress.isContextCheckout) window.location.href = this.config.payment.paypalExpress.redirectUrl[this.selectedPaymentMethod];
+                    if (this.config.payment.paypalExpress && !this.config.payment.paypalExpress.isContextCheckout) window.location.href = this.config.payment.paypalExpress.redirectUrl[this.selectedPaymentMethod];
                 } catch (error) {
                     console.error('Error fetching payment methods:', error);
                     return false;
