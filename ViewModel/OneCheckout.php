@@ -37,6 +37,11 @@ class OneCheckout implements ArgumentInterface
 {
 
     /**
+     * Get country path
+     */
+    const COUNTRY_CODE_PATH = 'general/country/default';
+
+    /**
      * @var AttributeMetadataDataProvider
      */
     private $attributeMetadataDataProvider;
@@ -186,6 +191,19 @@ class OneCheckout implements ArgumentInterface
             'general/locale/code',
             \Magento\Store\Model\ScopeInterface::SCOPE_STORE,
             $storeId
+        );
+    }
+
+    /**
+     * Get Country code by website scope
+     *
+     * @return string
+     */
+    public function getCountryByWebsite(): string
+    {
+        return $this->scopeConfig->getValue(
+            self::COUNTRY_CODE_PATH,
+            \Magento\Store\Model\ScopeInterface::SCOPE_WEBSITES
         );
     }
 }
