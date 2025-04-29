@@ -61,6 +61,7 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
             paymentMethods: [],
             couponCode: null,
             checkShipAddress: false,
+            checkoutAgreements: <?= /* @noEscape */ json_encode($viewModel->getAgreementsConfig()) ?>,
             errors: {},
             payPalConf: (window.checkoutConfig.payment) ? window.checkoutConfig.payment.paypalExpress : '',
             guestShipAddr: null,
@@ -71,6 +72,8 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
             isBillingFormOpen: false,
             showDetails: false,
             getPrefillShipAddr:false,
+            isAgreementModalOpen: false,
+            selectedAgreement: null,
             init() {
                 this.guest = this.config.customerData.length === 0;
                 this.generateAddressStreetArray();
@@ -873,9 +876,20 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
             /* Place order for paypal */
             async continueToPayPal() {
                 const formData = {};
+                if (Object.keys(this.checkoutAgreements.agreements).length > 0) {
+                    if (!document.getElementById(`agreement_${this.selectedPaymentMethod}`).checked) {
+                        this.loading = false;
+                        this.displayWarning('Please accept the terms and conditions to continue.', '.payment-method', 'payment-method-warning');
+                        return;
+                    }
+                }
                 formData["billingAddress"] = this.formatAddress(this.defBillAdr);
                 formData["paymentMethod"] = {};
                 formData["paymentMethod"]["method"] = this.selectedPaymentMethod;
+                if (Object.keys(this.checkoutAgreements.agreements).length > 0) {
+                    formData["paymentMethod"]["extension_attributes"] = {};
+                    formData["paymentMethod"]["extension_attributes"]["agreement_ids"] = [document.getElementById(`agreement_${this.selectedPaymentMethod}`).value];
+                }
                 formData["cartId"] = this.config.quoteData.entity_id;
                 var url = `/rest/${this.storeCode}/V1/guest-carts/${this.config.quoteData.entity_id}/set-payment-information`;
                 if (!this.guest) url = `/rest/${this.storeCode}/V1/carts/mine/set-payment-information`;
@@ -905,6 +919,13 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
             /* Default Place Order */
             async placeOrder() {
                 this.loading = true;
+                if (Object.keys(this.checkoutAgreements.agreements).length > 0) {
+                    if (!document.getElementById(`agreement_${this.selectedPaymentMethod}`).checked) {
+                        this.loading = false;
+                        this.displayWarning('Please accept the terms and conditions to continue.', '.payment-method', 'payment-method-warning');
+                        return;
+                    }
+                }
                 const formData = {};
                 if (this.guest) {
                     formData["billing_address"] = this.defBillAdr;
@@ -920,6 +941,10 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
                 formData["paymentMethod"]["additional_data"] = null;
                 formData["paymentMethod"]["method"] = this.selectedPaymentMethod;
                 formData["paymentMethod"]["po_number"] = null;
+                if (Object.keys(this.checkoutAgreements.agreements).length > 0) {
+                    formData["paymentMethod"]["extension_attributes"] = {};
+                    formData["paymentMethod"]["extension_attributes"]["agreement_ids"] = [document.getElementById(`agreement_${this.selectedPaymentMethod}`).value];
+                }
                 const requestBody = JSON.stringify(formData);
                 var url = `/rest/${this.storeCode}/V1/guest-carts/${this.config.quoteData.entity_id}/payment-information`;
                 if (!this.guest) url = `/rest/${this.storeCode}/V1/carts/mine/payment-information`;
@@ -941,6 +966,10 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
                     console.error('Error fetching payment methods:', error);
                     return false;
                 }
+            },
+            showAgreementModal(agreement) {
+                this.selectedAgreement = agreement;
+                this.isAgreementModalOpen = true;
             }
         };
     }

@@ -34,7 +34,7 @@
             </action>
         </referenceBlock>
         <referenceContainer name="content">
-            <block name="onepage.checkout.index" class="Magento\Checkout\Block\Onepage" ifconfig="viraxpress_config/checkout_theme_switcher/enable_vira_checkout" template="ViraXpress_CheckoutOptimization::onecheckout.phtml">
+            <block name="onepage.checkout.index" class="ViraXpress\CheckoutOptimization\Block\Onepage" ifconfig="viraxpress_config/checkout_theme_switcher/enable_vira_checkout" template="ViraXpress_CheckoutOptimization::onecheckout.phtml">
                 <!-- Guest Email Block -->
                 <block name="guest-email" ifconfig="viraxpress_config/checkout_theme_switcher/enable_vira_checkout" class="Magento\Framework\View\Element\Template">
                     <action method="setTemplate">
