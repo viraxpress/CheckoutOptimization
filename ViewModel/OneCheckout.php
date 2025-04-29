@@ -23,6 +23,7 @@
 
 namespace ViraXpress\CheckoutOptimization\ViewModel;
 
+use Magento\Framework\Escaper;
 use Magento\Ui\Component\Form\AttributeMapper;
 use Magento\Store\Model\StoreManagerInterface;
 use Magento\Integration\Model\Oauth\TokenFactory;
@@ -32,6 +33,9 @@ use Magento\Framework\Pricing\PriceCurrencyInterface;
 use Magento\Framework\Locale\CurrencyInterface;
 use Magento\Customer\Model\AttributeMetadataDataProvider;
 use Magento\Framework\App\Config\ScopeConfigInterface;
+use Magento\Framework\App\ObjectManager;
+use Magento\CheckoutAgreements\Api\CheckoutAgreementsListInterface;
+use Magento\CheckoutAgreements\Model\Api\SearchCriteria\ActiveStoreAgreementsFilter;
 
 class OneCheckout implements ArgumentInterface
 {
@@ -45,6 +49,21 @@ class OneCheckout implements ArgumentInterface
      * @var AttributeMetadataDataProvider
      */
     private $attributeMetadataDataProvider;
+
+    /**
+     * @var CheckoutAgreementsListInterface
+     */
+    private $checkoutAgreementsList;
+
+    /**
+     * @var ActiveStoreAgreementsFilter
+     */
+    private $activeStoreAgreementsFilter;
+
+    /**
+     * @var \Magento\Framework\Escaper
+     */
+    protected $escaper;
 
     /**
      * @var AttributeMapper
@@ -92,8 +111,12 @@ class OneCheckout implements ArgumentInterface
      * @param StoreManagerInterface $storeManager
      * @param AttributeMetadataDataProvider $attributeMetadataDataProvider
      * @param AttributeMapper $attributeMapper
+     * @param CheckoutAgreementsListInterface $checkoutAgreementsList
+     * @param ActiveStoreAgreementsFilter $activeStoreAgreementsFilter
+     * @param Escaper $escaper
      */
     public function __construct(
+        Escaper $escaper,
         CustomerSession $customerSession,
         TokenFactory $tokenModelFactory,
         PriceCurrencyInterface $priceCurrency,
@@ -101,7 +124,9 @@ class OneCheckout implements ArgumentInterface
         ScopeConfigInterface $scopeConfig,
         StoreManagerInterface $storeManager,
         AttributeMetadataDataProvider $attributeMetadataDataProvider,
-        AttributeMapper $attributeMapper
+        AttributeMapper $attributeMapper,
+        CheckoutAgreementsListInterface $checkoutAgreementsList,
+        ActiveStoreAgreementsFilter $activeStoreAgreementsFilter = null
     ) {
         $this->scopeConfig = $scopeConfig;
         $this->storeManager = $storeManager;
@@ -110,7 +135,14 @@ class OneCheckout implements ArgumentInterface
         $this->customerSession = $customerSession;
         $this->attributeMapper = $attributeMapper;
         $this->tokenModelFactory = $tokenModelFactory;
+        $this->checkoutAgreementsList = $checkoutAgreementsList ?: ObjectManager::getInstance()->get(
+            \Magento\CheckoutAgreements\Api\CheckoutAgreementsListInterface::class
+        );
+        $this->activeStoreAgreementsFilter = $activeStoreAgreementsFilter ?: ObjectManager::getInstance()->get(
+            ActiveStoreAgreementsFilter::class
+        );
         $this->attributeMetadataDataProvider = $attributeMetadataDataProvider;
+        $this->escaper = $escaper;
     }
 
     /**
@@ -205,5 +237,38 @@ class OneCheckout implements ArgumentInterface
             self::COUNTRY_CODE_PATH,
             \Magento\Store\Model\ScopeInterface::SCOPE_WEBSITES
         );
+    }
+
+    /**
+     * Returns agreements config.
+     *
+     * @return array
+     */
+    public function getAgreementsConfig()
+    {
+        $agreementConfiguration = [];
+        $isAgreementsEnabled = $this->scopeConfig->isSetFlag(
+            \Magento\CheckoutAgreements\Model\AgreementsProvider::PATH_ENABLED,
+            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+        );
+
+        $agreementsList = $this->checkoutAgreementsList->getList(
+            $this->activeStoreAgreementsFilter->buildSearchCriteria()
+        );
+        $agreementConfiguration['isEnabled'] = (bool)($isAgreementsEnabled && count($agreementsList) > 0);
+
+        foreach ($agreementsList as $agreement) {
+            $agreementConfiguration['agreements'][] = [
+                'content' => $agreement->getIsHtml()
+                    ? $agreement->getContent()
+                    : nl2br($this->escaper->escapeHtml($agreement->getContent())),
+                'checkboxText' => $this->escaper->escapeHtml($agreement->getCheckboxText()),
+                'mode' => $agreement->getMode(),
+                'agreementId' => $agreement->getAgreementId(),
+                'contentHeight' => $agreement->getContentHeight()
+            ];
+        }
+
+        return $agreementConfiguration;
     }
 }
