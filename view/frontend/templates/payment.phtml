@@ -322,7 +322,7 @@ if ($paypalSmartButton->getJsInitParams()) {
                                                     </div>
                                                 </fieldset>
                                                 <div class="checkout-agreements-block">
-                                                    <template x-if="checkoutAgreements.agreements.length">
+                                                    <template x-if="checkoutAgreements.isEnabled">
                                                         <div class="checkout-agreements fieldset">
                                                             <template x-for="agreement in checkoutAgreements.agreements">
                                                                 <div class="checkout-agreement field choice required">
@@ -432,7 +432,7 @@ if ($paypalSmartButton->getJsInitParams()) {
             </div>
         </div>
     </div>
-    <template x-if="checkoutAgreements.agreements.length">
+    <template x-if="checkoutAgreements.isEnabled">
         <!-- Agreement Terms Modal -->
         <div class="modals-wrapper">
             <div x-show="isAgreementModalOpen"
