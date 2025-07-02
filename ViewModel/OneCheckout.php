@@ -43,7 +43,7 @@ class OneCheckout implements ArgumentInterface
     /**
      * Get country path
      */
-    const COUNTRY_CODE_PATH = 'general/country/default';
+    public const COUNTRY_CODE_PATH = 'general/country/default';
 
     /**
      * @var AttributeMetadataDataProvider
@@ -103,6 +103,7 @@ class OneCheckout implements ArgumentInterface
     /**
      * Constructor.
      *
+     * @param Escaper $escaper
      * @param CustomerSession $customerSession
      * @param TokenFactory $tokenModelFactory
      * @param PriceCurrencyInterface $priceCurrency
@@ -113,7 +114,6 @@ class OneCheckout implements ArgumentInterface
      * @param AttributeMapper $attributeMapper
      * @param CheckoutAgreementsListInterface $checkoutAgreementsList
      * @param ActiveStoreAgreementsFilter $activeStoreAgreementsFilter
-     * @param Escaper $escaper
      */
     public function __construct(
         Escaper $escaper,
@@ -126,7 +126,7 @@ class OneCheckout implements ArgumentInterface
         AttributeMetadataDataProvider $attributeMetadataDataProvider,
         AttributeMapper $attributeMapper,
         CheckoutAgreementsListInterface $checkoutAgreementsList,
-        ActiveStoreAgreementsFilter $activeStoreAgreementsFilter = null
+        ActiveStoreAgreementsFilter $activeStoreAgreementsFilter
     ) {
         $this->scopeConfig = $scopeConfig;
         $this->storeManager = $storeManager;
@@ -236,7 +236,7 @@ class OneCheckout implements ArgumentInterface
         return $this->scopeConfig->getValue(
             self::COUNTRY_CODE_PATH,
             \Magento\Store\Model\ScopeInterface::SCOPE_WEBSITES
-        );
+        ) ?? '';
     }
 
     /**

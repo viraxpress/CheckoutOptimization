@@ -64,19 +64,18 @@ class Onepage extends \Magento\Framework\View\Element\Template
      * @param CustomerSession $customerSession
      * @param CheckoutSession $checkoutSession
      * @param DefaultConfigProvider $configProvider
-     * @param array $data
      * @param Json $serializer
      * @param SerializerInterface $serializerInterface
-     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+     * @param array $data
      */
     public function __construct(
         Context $context,
         CustomerSession $customerSession,
         CheckoutSession $checkoutSession,
         DefaultConfigProvider $configProvider,
-        array $data = [],
-        Json $serializer = null,
-        SerializerInterface $serializerInterface = null
+        Json $serializer,
+        SerializerInterface $serializerInterface,
+        array $data = []
     ) {
         parent::__construct($context, $data);
         $this->customerSession = $customerSession;

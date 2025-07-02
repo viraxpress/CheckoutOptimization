@@ -1,16 +1,33 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * ViraXpress - https://www.viraxpress.com
+ *
+ * LICENSE AGREEMENT
+ *
+ * This file is part of the ViraXpress package and is licensed under the ViraXpress license agreement.
+ * You can view the full license at:
+ * https://www.viraxpress.com/license
+ *
+ * By utilizing this file, you agree to comply with the terms outlined in the ViraXpress license.
+ *
+ * DISCLAIMER
+ *
+ * Modifications to this file are discouraged to ensure seamless upgrades and compatibility with future releases.
+ *
+ * @category    ViraXpress
+ * @package     ViraXpress_CheckoutOptimization
+ * @author      ViraXpress
+ * @copyright   © 2024 ViraXpress (https://www.viraxpress.com/)
+ * @license     https://www.viraxpress.com/license
  */
+use Magento\Framework\Escaper;
 
 /**
+ * @var Escaper $escaper
  * @var \Magento\Theme\Block\Html\Header\Logo $block
- */
-$storeName = $block->getThemeName() ? $block->getThemeName() : $block->getLogoAlt();
-/**
  * @var \Magento\Theme\ViewModel\Block\Html\Header\LogoSizeResolverInterface|null $logoSizeResolver
  */
+$storeName = $block->getThemeName() ? $block->getThemeName() : $block->getLogoAlt();
 $logoSizeResolver = $block->getLogoSizeResolver();
 $logoWidth = $logoSizeResolver !== null && $logoSizeResolver->getWidth()
     ? $logoSizeResolver->getWidth()
@@ -21,13 +38,13 @@ $logoHeight = $logoSizeResolver !== null && $logoSizeResolver->getHeight()
 ?>
 <a
     class="logo inline-flex items-center min-h-[56.4px] lg:p-[0.2em] print:mt-2 print:mb-6"
-    href="<?= $block->escapeUrl($block->getUrl('')) ?>"
-    title="<?= $block->escapeHtmlAttr($storeName) ?>"
+    href="<?= $escaper->escapeUrl($block->getUrl('')) ?>"
+    title="<?= $escaper->escapeHtmlAttr($storeName) ?>"
     aria-label="store logo">
-    <img src="<?= $block->escapeUrl($block->getLogoSrc()) ?>"
-         title="<?= $block->escapeHtmlAttr($block->getLogoAlt()) ?>"
-         alt="<?= $block->escapeHtmlAttr($block->getLogoAlt()) ?>"
-            <?= $logoWidth ? 'width="' . $block->escapeHtmlAttr($logoWidth) . '"' : '' ?>
-            <?= $logoHeight ? 'height="' . $block->escapeHtmlAttr($logoHeight) . '"' : '' ?>
+    <img src="<?= $escaper->escapeUrl($block->getLogoSrc()) ?>"
+         title="<?= $escaper->escapeHtmlAttr($block->getLogoAlt()) ?>"
+         alt="<?= $escaper->escapeHtmlAttr($block->getLogoAlt()) ?>"
+            <?= $logoWidth ? 'width="' . $escaper->escapeHtmlAttr($logoWidth) . '"' : '' ?>
+            <?= $logoHeight ? 'height="' . $escaper->escapeHtmlAttr($logoHeight) . '"' : '' ?>
     />
 </a>

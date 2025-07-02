@@ -30,9 +30,9 @@ if ($paypalSmartButton->getJsInitParams()) {
         ? json_encode($widget['Magento_Paypal/js/in-context/product-express-checkout'], true) : false;
     $attributes = [
         'src' => $widget['Magento_Paypal/js/in-context/product-express-checkout']['clientConfig']['sdkUrl']
-    ];
-    echo /* @noEscape */ $secureRenderer->renderTag('script', $attributes);
-}?>
+    ]; ?>
+    <?= /* @noEscape */ $secureRenderer->renderTag('script', $attributes) ?>
+<?php }?>
 <div x-show="step === 'payment'">
     <!-- Add payment form here -->
     <div id="payment" class="checkout-payment-method" role="presentation">
