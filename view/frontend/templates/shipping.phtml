@@ -38,7 +38,7 @@
                         <div class="shipping-address-items grid grid-cols-1 lg:grid-cols-3 gap-5">
                             <template x-for="address in config.customerData.addresses" :key="address.id">
                                 <template x-if="address.firstname">
-                                    <div x-bind:class="`shipping-address-item ${selectedAddressId === address.id ? 'selected-item' : 'not-selected-item'}`" class="border border-gray-200 rounded p-5">
+                                    <div x-bind:class="`shipping-address-item ${selectedAddressId === address.id ? 'selected-item' : 'not-selected-item'}`" class="border border-gray-200 rounded-sm p-5">
                                        <div>
                                             <p class="text-base" x-text="`${address.firstname} ${address.lastname}`"></p>
                                             <p class="text-base" x-text="address.street.join(', ')"></p>
@@ -281,7 +281,7 @@
             x-transition:leave="transition ease-in duration-200"
             x-transition:leave-start="opacity-100"
             x-transition:leave-end="opacity-0"
-            class="fixed inset-0 bg-black bg-opacity-50 z-[500]"
+            class="fixed inset-0 bg-black bg-opacity-50 z-500"
             @click="isShipModalOpen = false"
             style="">
         </div>
@@ -294,7 +294,7 @@
             x-transition:leave="transition ease-in duration-200 transform"
             x-transition:leave-start="opacity-100 scale-100"
             x-transition:leave-end="opacity-0 scale-90"
-            class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-lg z-[600] max-w-[90%] md:max-w-sm lg:max-w-[705px] w-full">
+            class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-lg z-600 max-w-[90%] md:max-w-sm lg:max-w-[705px] w-full">
 
             <!-- Scrollable Content -->
             <div class="relative max-h-[80vh] overflow-y-auto p-8 md:p-10 md:py-12 ">
@@ -459,7 +459,7 @@
                                 </div>
                             </template>
                                 <div class="field choice inline-flex items-center gap-3 col-span-2">
-                                    <input type="checkbox" class="checkbox rounded h-4 w-4 cursor-pointer border-gray-300 text-primary focus:ring-primary" name="save_in_address_book"
+                                    <input type="checkbox" class="checkbox rounded-sm h-4 w-4 cursor-pointer border-gray-300 text-primary focus:ring-primary" name="save_in_address_book"
                                     x-bind:checked="checkShipAddress ? config.customerData.addresses['newship']['save_in_address_book'] : false"
                                     id="shipping-save-in-address-book" />
                                     <label class="label block text-sm leading-6 text-gray-900 cursor-pointer" for="shipping-save-in-address-book">

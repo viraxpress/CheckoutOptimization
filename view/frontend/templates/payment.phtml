@@ -81,7 +81,7 @@ if ($paypalSmartButton->getJsInitParams()) {
                                                                 <div class="billing-address-same-as-shipping-block field choice flex justify-start items-center gap-2">
                                                                     <input type="checkbox" name="billing-address-same-as-shipping"
                                                                     x-model="isAddressSameAsShipping"
-                                                                    x-bind:id="`billing-same-as-shipping-${payment_method.code}`" class="checkbox rounded h-4 w-4 cursor-pointer border-gray-300 text-primary focus:ring-primary">
+                                                                    x-bind:id="`billing-same-as-shipping-${payment_method.code}`" class="checkbox rounded-sm h-4 w-4 cursor-pointer border-gray-300 text-primary focus:ring-primary">
                                                                     <label class="label block  leading-6 text-gray-900" 
                                                                     x-bind:for="`billing-same-as-shipping-${payment_method.code}`">
                                                                         <span>
@@ -262,7 +262,7 @@ if ($paypalSmartButton->getJsInitParams()) {
                                                                                         </div>
                                                                                     </template>
                                                                                     <div class="field choice mb-5 col-span-2" x-show="!guest">
-                                                                                        <input type="checkbox" name="save_in_address_book" class="checkbox rounded h-4 w-4 cursor-pointer border-gray-300 text-primary focus:ring-primary"
+                                                                                        <input type="checkbox" name="save_in_address_book" class="checkbox rounded-sm h-4 w-4 cursor-pointer border-gray-300 text-primary focus:ring-primary"
                                                                                         x-bind:checked="(selectedBillingAddressId != 0 || config.customerData.addresses.length == 0) && defBillAdr ? defBillAdr['save_in_address_book'] : false"
                                                                                         x-bind:id="`billsave-in-adr-${payment_method.code}`" />
                                                                                         <label class="label inline-block ml-2 cursor-pointer leading-6 text-gray-900"
@@ -442,7 +442,7 @@ if ($paypalSmartButton->getJsInitParams()) {
                 x-transition:leave="transition ease-in duration-200"
                 x-transition:leave-start="opacity-100"
                 x-transition:leave-end="opacity-0"
-                class="fixed inset-0 bg-black bg-opacity-50 z-[500]"
+                class="fixed inset-0 bg-black bg-opacity-50 z-500"
                 @click="isAgreementModalOpen = false"
                 style="">
             </div>
@@ -453,7 +453,7 @@ if ($paypalSmartButton->getJsInitParams()) {
                 x-transition:leave="transition ease-in duration-200 transform"
                 x-transition:leave-start="opacity-100 scale-100"
                 x-transition:leave-end="opacity-0 scale-90"
-                class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-lg z-[600] max-w-[90%] md:max-w-sm lg:max-w-[705px] w-full">
+                class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-lg z-600 max-w-[90%] md:max-w-sm lg:max-w-[705px] w-full">
                 <!-- Scrollable Content -->
                 <div class="relative max-h-[80vh] overflow-y-auto p-8 md:p-10 md:py-12 ">
                     <!-- Close Button -->
