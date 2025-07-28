@@ -192,8 +192,15 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
             },
             /* Load country to check region is available */
             onCountryChange(id) {
-                if (this.config.customerData.addresses && Object.keys(this.config.customerData.addresses).length != 0) {
-                    this.checkShipAddress = (Object.keys(window.checkoutConfig.customerData).length > 0 && window.checkoutConfig.customerData.addresses['newship']) ? true : false;
+                /* if (this.config.customerData.addresses && Object.keys(this.config.customerData.addresses).length != 0) {
+                    this.checkShipAddress = (Object.keys(window.checkoutConfig.customerData).length > 0 && this.config.customerData.addresses['newship']) ? true : false;
+                } */
+                if (this.config.customerData.addresses && Object.keys(this.config.customerData.addresses).length !== 0) {
+                    const newship = this.config.customerData.addresses['newship'];
+                    this.checkShipAddress = (
+                        Object.keys(window.checkoutConfig.customerData).length > 0 &&
+                        Array.isArray(newship)
+                    ) ? true : false;
                 }
                 /* this.defBillAdr = Object.keys(window.checkoutConfig.customerData).length > 0 && window.checkoutConfig.customerData.addresses; */
                 var countryId = document.getElementById(id);
@@ -935,6 +942,7 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
                     /* const selectedAddress = this.config.customerData.addresses[this.selectedAddressId]; */
                     const selectedAddress = this.defBillAdr;
                     if (selectedAddress['id'] == "newship") selectedAddress['save_in_address_book'] = 0;
+                    if (this.selectedAddressId == "newship" && selectedAddress['id'] != "newship") selectedAddress['save_in_address_book'] = 1;
                     formData["billing_address"] = this.formatAddress(selectedAddress);
                 }
                 formData["cartId"] = this.config.quoteData.entity_id;
