@@ -29,6 +29,7 @@ use Magento\Framework\View\Element\Template\Context;
 use Magento\Framework\Serialize\SerializerInterface;
 use Magento\Checkout\Model\SessionFactory as CheckoutSession;
 use Magento\Customer\Model\SessionFactory as CustomerSession;
+use Magento\Checkout\Model\CompositeConfigProvider;
 
 /**
  * Onepage checkout block
@@ -50,7 +51,7 @@ class Onepage extends \Magento\Framework\View\Element\Template
     private $checkoutSession;
 
     /**
-     * @var DefaultConfigProvider
+     * @var CompositeConfigProvider
      */
     protected $configProvider;
 
@@ -63,19 +64,20 @@ class Onepage extends \Magento\Framework\View\Element\Template
      * @param Context $context
      * @param CustomerSession $customerSession
      * @param CheckoutSession $checkoutSession
-     * @param DefaultConfigProvider $configProvider
+     * @param CompositeConfigProvider $configProvider
+     * @param array $data
      * @param Json $serializer
      * @param SerializerInterface $serializerInterface
-     * @param array $data
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function __construct(
         Context $context,
         CustomerSession $customerSession,
         CheckoutSession $checkoutSession,
-        DefaultConfigProvider $configProvider,
-        Json $serializer,
-        SerializerInterface $serializerInterface,
-        array $data = []
+        CompositeConfigProvider $configProvider,
+        array $data = [],
+        Json $serializer = null,
+        SerializerInterface $serializerInterface = null
     ) {
         parent::__construct($context, $data);
         $this->customerSession = $customerSession;
