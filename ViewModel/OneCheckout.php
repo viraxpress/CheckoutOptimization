@@ -164,11 +164,14 @@ class OneCheckout implements ArgumentInterface
             if ($attribute->getIsUserDefined()) {
                 continue;
             }
-            $elements[$code] = $this->attributeMapper->map($attribute);
-            if (isset($elements[$code]['label'])) {
-                $label = $elements[$code]['label'];
-                $elements[$code]['label'] = __($label);
+            $mappedAttribute = $this->attributeMapper->map($attribute);
+            if (empty($mappedAttribute['visible']) || !$mappedAttribute['visible']) {
+                continue;
             }
+            if (isset($mappedAttribute['label'])) {
+                $mappedAttribute['label'] = __($mappedAttribute['label']);
+            }
+            $elements[$code] = $mappedAttribute;
         }
         return $elements;
     }
