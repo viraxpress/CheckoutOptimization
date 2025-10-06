@@ -162,7 +162,9 @@
                     <div class="shipping-information-content">
                         <p x-text="`${selectedShippingAddress.firstname} ${selectedShippingAddress.lastname}`"></p>
                         <p x-text="selectedShippingAddress.street.join(', ')"></p>
-                        <p x-text="`${selectedShippingAddress.city}, ${(selectedShippingAddress.region.region) ? selectedShippingAddress.region.region : selectedShippingAddress.region}, ${selectedShippingAddress.postcode}`"></p>
+                        <p 
+                          x-text="`${selectedShippingAddress.city || ''}${(selectedShippingAddress.region && (typeof selectedShippingAddress.region === 'object' ? selectedShippingAddress.region.region : selectedShippingAddress.region)) ? ', ' + (typeof selectedShippingAddress.region === 'object' ? selectedShippingAddress.region.region : selectedShippingAddress.region) : ''}${selectedShippingAddress.postcode ? ', ' + selectedShippingAddress.postcode : ''}`">
+                        </p>
                         <p x-text="selectedShippingAddress.country_id"></p>
                         <p x-text="selectedShippingAddress.telephone"></p>
                     </div>
