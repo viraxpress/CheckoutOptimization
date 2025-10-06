@@ -31,7 +31,7 @@
             <span class="title block mb-3 font-semibold"><?= $escaper->escapeHtml(__('Order Summary'))?></span>
         </div>
         <template x-if="step === 'payment'">
-            <table class="data table table-totals mb-8 w-full">
+            <table class="data table table-totals mb-8 w-full" x-on:giftcode-applied.window="getTotals()">
                 <tbody>
                     <template x-for="(value, index) in totalSegments">
                         <template x-if="value.code != 'grand_total'">
@@ -44,6 +44,11 @@
                             </tr>
                         </template>
                     </template>
+                    <tr>
+                        <td>
+                            <?= $block->getChildHtml('summary.info'); ?>
+                        </td>
+                    </tr>
                     <template x-for="(value, index) in totalSegments">
                         <template x-if="value.code == 'grand_total'">
                             <tr class="grand totals">
@@ -162,7 +167,9 @@
                     <div class="shipping-information-content">
                         <p x-text="`${selectedShippingAddress.firstname} ${selectedShippingAddress.lastname}`"></p>
                         <p x-text="selectedShippingAddress.street.join(', ')"></p>
-                        <p x-text="`${selectedShippingAddress.city}, ${(selectedShippingAddress.region.region) ? selectedShippingAddress.region.region : selectedShippingAddress.region}, ${selectedShippingAddress.postcode}`"></p>
+                        <p 
+                          x-text="`${selectedShippingAddress.city || ''}${(selectedShippingAddress.region && (typeof selectedShippingAddress.region === 'object' ? selectedShippingAddress.region.region : selectedShippingAddress.region)) ? ', ' + (typeof selectedShippingAddress.region === 'object' ? selectedShippingAddress.region.region : selectedShippingAddress.region) : ''}${selectedShippingAddress.postcode ? ', ' + selectedShippingAddress.postcode : ''}`">
+                        </p>
                         <p x-text="selectedShippingAddress.country_id"></p>
                         <p x-text="selectedShippingAddress.telephone"></p>
                     </div>

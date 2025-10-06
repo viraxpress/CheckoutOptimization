@@ -143,7 +143,7 @@ if ($paypalSmartButton->getJsInitParams()) {
                                                                                                         x-bind:id="index"
                                                                                                         x-bind:name="index"
                                                                                                         x-on:input.debounce="onChangeValidateForm($event)"
-                                                                                                        x-bind:value="(selectedBillingAddressId != 0 || config.customerData.addresses.length == 0) && defBillAdr ? defBillAdr[index] : ''"
+                                                                                                        x-bind:value="(selectedBillingAddressId != 0 || config.customerData.addresses?.length == 0) && defBillAdr ? defBillAdr[index] : ''"
                                                                                                         x-bind:data-validate="JSON.stringify(address.validation)">
                                                                                                     </div>
                                                                                                     <div class="field-error text-base text-error mt-2" x-show="errors[index]" x-text="errors[index]"></div>
@@ -166,7 +166,7 @@ if ($paypalSmartButton->getJsInitParams()) {
                                                                                                                 class="input-text w-full block rounded-md border-0 py-2.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
                                                                                                                 x-on:input.debounce="onChangeValidateForm($event)"
                                                                                                                 type="text"
-                                                                                                                x-bind:value="(selectedBillingAddressId != 0 || config.customerData.addresses.length == 0) && defBillAdr ? defBillAdr[index][indx] : ''"
+                                                                                                                x-bind:value="(selectedBillingAddressId != 0 || config.customerData.addresses?.length == 0) && defBillAdr ? defBillAdr[index][indx] : ''"
                                                                                                                 x-bind:name="index + '[' + indx + ']'"
                                                                                                                 x-bind:data-validate="(indx == '0') ? JSON.stringify(address.validation) : []">
                                                                                                                 <div class="field-error text-base text-error mt-2" x-show="errors[index + '[' + indx + ']']" x-text="errors[index + '[' + indx + ']']"></div>
@@ -187,17 +187,19 @@ if ($paypalSmartButton->getJsInitParams()) {
                                                                                                     </template>
                                                                                                     <div class="control mt-1" :class="address.formElement == 'multiline' ? 'flex flex-col lg:flex-row gap-5' : 'block'">
                                                                                                         <select
-                                                                                                        class="select"
-                                                                                                        x-on:input.debounce="onChangeValidateForm($event)"
-                                                                                                        @change="onCountryChange($el.id)"
-                                                                                                        x-bind:id="guest ? 'bill-guest-country' : 'country'"
-                                                                                                        x-bind:name="index"
-                                                                                                        x-bind:data-validate="JSON.stringify(address.validation)">
+                                                                                                            class="select"
+                                                                                                            x-on:input.debounce="onChangeValidateForm($event)"
+                                                                                                            @change="onCountryChangeNewAddress($event.target.value)"
+                                                                                                            x-bind:id="guest ? 'bill-guest-country' : 'country'"
+                                                                                                            x-bind:name="index"
+                                                                                                            x-bind:data-validate="JSON.stringify(address.validation)"
+                                                                                                            x-init="onCountryChangeNewAddress(defaultAddress.country_id)"
+                                                                                                        >
                                                                                                             <template x-for="(option, index) in address.options">
                                                                                                                 <option
-                                                                                                                :value="option.value"
-                                                                                                                :selected="defaultAddress.country_id === option.value"
-                                                                                                                x-text="option.label"></option>
+                                                                                                                    :value="option.value"
+                                                                                                                    :selected="defaultAddress.country_id === option.value"
+                                                                                                                    x-text="option.label"></option>
                                                                                                             </template>
                                                                                                         </select>
                                                                                                     </div>
@@ -228,7 +230,7 @@ if ($paypalSmartButton->getJsInitParams()) {
                                                                                                             </option>
                                                                                                             <template x-for="(option, index) in regionArray">
                                                                                                                 <option :value="index"
-                                                                                                                x-bind:selected = "(selectedBillingAddressId != 0 || config.customerData.addresses.length == 0) && defBillAdr ? defBillAdr['region_id'] === index : ''"
+                                                                                                                x-bind:selected = "(selectedBillingAddressId != 0 || config.customerData.addresses?.length == 0) && defBillAdr ? defBillAdr['region_id'] === index : ''"
                                                                                                                 x-text="option"></option>
                                                                                                             </template>
                                                                                                         </select>
@@ -251,7 +253,7 @@ if ($paypalSmartButton->getJsInitParams()) {
                                                                                                         class="input-text region-select-input input-text w-full block rounded-md border-0 py-2.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
                                                                                                         x-on:input.debounce="onChangeValidateForm($event)"
                                                                                                         x-bind:type="address.dataType"
-                                                                                                        x-bind:value="(selectedBillingAddressId != 0 || config.customerData.addresses.length == 0) && defBillAdr ? defBillAdr[index] : ''"
+                                                                                                        x-bind:value="(selectedBillingAddressId != 0 || config.customerData.addresses?.length == 0) && defBillAdr ? defBillAdr[index] : ''"
                                                                                                         x-bind:id="index"
                                                                                                         x-bind:name="index"
                                                                                                         x-bind:data-validate="JSON.stringify(address.validation)">
@@ -263,7 +265,7 @@ if ($paypalSmartButton->getJsInitParams()) {
                                                                                     </template>
                                                                                     <div class="field choice mb-5 col-span-2" x-show="!guest">
                                                                                         <input type="checkbox" name="save_in_address_book" class="checkbox rounded h-4 w-4 cursor-pointer border-gray-300 text-primary focus:ring-primary"
-                                                                                        x-bind:checked="(selectedBillingAddressId != 0 || config.customerData.addresses.length == 0) && defBillAdr ? defBillAdr['save_in_address_book'] : false"
+                                                                                        x-bind:checked="(selectedBillingAddressId != 0 || config.customerData.addresses?.length == 0) && defBillAdr ? defBillAdr['save_in_address_book'] : false"
                                                                                         x-bind:id="`billsave-in-adr-${payment_method.code}`" />
                                                                                         <label class="label inline-block ml-2 cursor-pointer leading-6 text-gray-900"
                                                                                         x-bind:for="`billsave-in-adr-${payment_method.code}`">
@@ -296,7 +298,9 @@ if ($paypalSmartButton->getJsInitParams()) {
                                                                     <div class="space-y-3">
                                                                         <p x-text="`${defBillAdr.firstname} ${defBillAdr.lastname}`"></p>
                                                                         <p x-text="defBillAdr.street.join(', ')"></p>
-                                                                        <p x-text="`${defBillAdr.city}, ${(defBillAdr.region.region) ? defBillAdr.region.region : defBillAdr.region}, ${defBillAdr.postcode}`"></p>
+                                                                        <p 
+                                                                          x-text="`${defBillAdr.city || ''}${(defBillAdr.region && (typeof defBillAdr.region === 'object' ? defBillAdr.region.region : defBillAdr.region)) ? ', ' + (typeof defBillAdr.region === 'object' ? defBillAdr.region.region : defBillAdr.region) : ''}${defBillAdr.postcode ? ', ' + defBillAdr.postcode : ''}`">
+                                                                        </p>
                                                                         <p x-text="defBillAdr.country_id"></p>
                                                                         <p x-text="defBillAdr.telephone"></p>
                                                                     </div>

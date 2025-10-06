@@ -153,7 +153,7 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
                     }
                 }
                 if (!this.guest && this.config.customerData.addresses.length === 0) {
-                    var inter = setInterval(() => { clearInterval(inter); this.onCountryChange('country');}, 1000);
+                    // var inter = setInterval(() => { clearInterval(inter); this.onCountryChange('country');}, 1000);
                 }
                 this.setPaymentInformation(method);
                 this.getTotals();
@@ -214,6 +214,35 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
                     }).catch((error) => { console.error("Fetch error:", error); });
                 }
             },
+
+            /* Load country to check region is available for new address */
+            onCountryChangeNewAddress(countryId) {
+                if (!countryId || countryId === 'country') {
+                    return; // skip invalid trigger
+                }
+                if (this.config.customerData.addresses && Object.keys(this.config.customerData.addresses).length != 0) {
+                    this.checkShipAddress = (Object.keys(window.checkoutConfig.customerData).length > 0 && window.checkoutConfig.customerData.addresses['newship']) ? true : false;
+                }
+                /* this.defBillAdr = Object.keys(window.checkoutConfig.customerData).length > 0 && window.checkoutConfig.customerData.addresses; */
+                if (countryId) {
+                    var url = "<?= $escaper->escapeUrl($block->getBaseUrl()) ?>onepage/address/state";
+                    fetch(url+ '?event_country=' + encodeURIComponent(countryId))
+                    .then((response) => { if (response.ok) return response.json();})
+                    .then((data) => { 
+                        if (data && Object.keys(data).length > 0) {
+                            document.querySelectorAll(".address-form-fields.region-field").forEach(element => {element.style.display = "none";});
+                            document.querySelectorAll(".address-form-fields.region_id-field").forEach(element => {element.style.display = "block";});
+                            this.isRegionAvailable = true;
+                        } else {
+                            document.querySelectorAll(".address-form-fields.region-field").forEach(element => {element.style.display = "block";});
+                            document.querySelectorAll(".address-form-fields.region_id-field").forEach(element => {element.style.display = "none";});
+                            this.isRegionAvailable = false;
+                        }
+                        this.regionArray = data;
+                    }).catch((error) => { console.error("Fetch error:", error); });
+                }
+            },
+
             /* Get customer address exists or not */
             get hasCustomerAddresses() {
                 return this.config.customerData.addresses && Object.keys(this.config.customerData.addresses).length > 0;
@@ -325,9 +354,9 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
             /* Is billing same as shipping */
             async isBillingSameAsShipping(id) {
                 const formData = {};
+                let valid = true;
                 if (id == 0) {
                     const form = document.getElementById('co-billing-form');
-                    let valid = true;
                     this.errors = {};
                     const elements = form.elements;
                     for (let element of elements) {
@@ -381,6 +410,11 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
                     formData["address"] = this.formatAddress(selectedAddress);
                 }
                 formData["cartId"] = this.config.quoteData.entity_id;
+                if (formData.address.region != null) {
+                    if (!formData.address.region['region_id']) {
+                        formData.address.region = null;
+                    }
+                }
                 const requestBody = JSON.stringify(formData);
                 var url = `/rest/${this.storeCode}/V1/guest-carts/${this.config.quoteData.entity_id}/billing-address`;
                 if (!this.guest) url = `/rest/${this.storeCode}/V1/carts/mine/billing-address`;
@@ -392,7 +426,9 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
                         return;
                     }
                     this.isBillingFormOpen = false;
-                    this.fetchPaymentInformation();
+                    if (valid) {
+                        this.fetchPaymentInformation();
+                    }
                 } catch (error) {
                     console.error('Error fetching payment methods:', error);
                     return false;
@@ -495,6 +531,17 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
             async fetchPaymentMethods(formData) {
                 var url = `/rest/${this.storeCode}/V1/guest-carts/${this.config.quoteData.entity_id}/shipping-information`;
                 if (!this.guest) url = `/rest/${this.storeCode}/V1/carts/mine/shipping-information`;
+                if (formData.shipping_address.region != null) {
+                    if (!formData.shipping_address.region['region_id']) {
+                        formData.shipping_address.region = null;
+                    }
+                }
+
+                if (formData.billing_address.region != null) {
+                    if (!formData.billing_address.region['region_id']) {
+                        formData.billing_address.region = null;
+                    }
+                }
                 const requestBody = JSON.stringify({ addressInformation: formData });
                 try {
                     const response = await fetch(url, { method: 'POST', headers: this.buildHeaders(this.guest), body: requestBody});
@@ -534,15 +581,30 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
                 delete formattedAddress['customer_id'];
                 formattedAddress['countryId'] = formattedAddress['country_id'];
                 delete formattedAddress['country_id'];
-                if (formattedAddress['region']['region']) {
-                    formattedAddress['region'] = formattedAddress['region']['region'];
-                    formattedAddress['regionCode'] = address.region.region_code;
-                    formattedAddress['regionId'] = formattedAddress['region_id'];
+                
+                if (formattedAddress.region) {
+                    if (typeof formattedAddress.region === 'object') {
+                        // if it's an object with "region" field
+                        if (formattedAddress.region.region) {
+                            formattedAddress.region = formattedAddress.region.region;
+                            formattedAddress.regionCode = address.region.region_code || '';
+                            formattedAddress.regionId = address.region.region_id || '';
+                        } else {
+                            // object but no region name
+                            formattedAddress.region = '';
+                            formattedAddress.regionCode = '';
+                            formattedAddress.regionId = formattedAddress.region_id || '';
+                        }
+                    } else if (typeof formattedAddress.region === 'string') {
+                        // plain string
+                        formattedAddress.region = formattedAddress.region;
+                        if (formattedAddress.region_id) {
+                            formattedAddress.regionId = formattedAddress.region_id;
+                        }
+                    }
                 } else {
-                    formattedAddress['region'] = formattedAddress['region'];
-                    if (formattedAddress['region_id']) formattedAddress['regionId'] = formattedAddress['region_id'];
+                    formattedAddress.region = '';
                 }
-                delete formattedAddress['region_id'];
                 formattedAddress['vatId'] = formattedAddress['vat_id'];
                 delete formattedAddress['id'];
                 delete formattedAddress['vat_id'];
@@ -771,6 +833,10 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
                             clearInterval(inter);
                             let e = localStorage.getItem('vira-mage-cache-storage');
                             const checkoutData = JSON.parse(e);
+                            const countryId = document.getElementById('ship-guest-country').value;
+                            if (countryId) {
+                                this.onCountryChangeNewAddress(countryId);
+                            }
                             const inputElement = document.getElementById('customer-email');
                             if (inputElement && checkoutData['checkout-data'] && checkoutData['checkout-data']['guestEmail']) {
                                 inputElement.value = checkoutData['checkout-data']['guestEmail'];
@@ -927,13 +993,16 @@ $addressFormFields['region_id']['validation']['required-entry'] = true;
                     }
                 }
                 const formData = {};
+                if (this.defBillAdr.region != null && !this.defBillAdr.region.region_id) {
+                    this.defBillAdr.region = null;
+                }
                 if (this.guest) {
                     formData["billing_address"] = this.defBillAdr;
                     formData["email"] = (email = document.getElementById("customer-email")) ? email.value : this.getGuestEmail();
                 } else {
                     /* const selectedAddress = this.config.customerData.addresses[this.selectedAddressId]; */
                     const selectedAddress = this.defBillAdr;
-                    if (selectedAddress['id'] == "newship") selectedAddress['save_in_address_book'] = 0;
+                    selectedAddress['save_in_address_book'] = 1;
                     formData["billing_address"] = this.formatAddress(selectedAddress);
                 }
                 formData["cartId"] = this.config.quoteData.entity_id;
