@@ -63,7 +63,7 @@ $viewModel = $block->getData('viewModel');
                                 </svg>
                             </span>
                             <!-- Tooltip Content -->
-                            <div class="field-tooltip-content absolute top-5 w-max p-4 bg-white shadow-lg border border-gray-100 rounded text-base right-0 z-50" x-show="isTooltipVisible" x-transition.origin.top.right x-bind:aria-hidden="!isTooltipVisible">
+                            <div class="field-tooltip-content absolute top-5 w-max p-4 bg-white shadow-lg border border-gray-100 rounded-sm text-base right-0 z-50" x-show="isTooltipVisible" x-transition.origin.top.right x-bind:aria-hidden="!isTooltipVisible">
                                 <?= $escaper->escapeHtml(__("We'll send your order confirmation here.")) ?>
                             </div>
                         </div>

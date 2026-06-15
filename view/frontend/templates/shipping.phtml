@@ -42,7 +42,9 @@
                                        <div>
                                             <p class="text-base" x-text="`${address.firstname} ${address.lastname}`"></p>
                                             <p class="text-base" x-text="address.street.join(', ')"></p>
-                                            <p class="text-base" x-text="`${address.city}, ${(address.region.region)?address.region.region:address.region}, ${address.postcode}`"></p>
+                                            <p class="text-base" 
+                                               x-text="`${address.city}${address.region && (address.region.region || typeof address.region === 'string') ? ', ' + (address.region.region || address.region) : ''}, ${address.postcode}`">
+                                            </p>
                                             <p class="text-base" x-text="address.country_id"></p>
                                             <p class="text-base" x-text="address.telephone"></p>
                                         </div>
@@ -145,7 +147,7 @@
                                     <div class="control mt-1" :class="address.formElement == 'multiline' ? 'flex flex-col lg:flex-row gap-5' : 'block'">
                                         <select class="select"
                                         x-on:input.debounce="onChangeValidateForm($event)"
-                                        @change="onCountryChange($el.id)" id="ship-guest-country"
+                                        @change="onCountryChangeNewAddress($event.target.value)" id="ship-guest-country"
                                         x-bind:name="index"
                                         x-bind:data-validate="JSON.stringify(address.validation)">
                                             <template x-for="(option, index) in address.options">
@@ -372,7 +374,7 @@
                                                         <input class="input-text block w-full rounded-md border-0 py-2.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
                                                         x-on:input.debounce="onChangeValidateForm($event)" type="text"
                                                         x-bind:name="index + '[' + indx + ']'"
-                                                        x-bind:value="checkShipAddress ? config.customerData.addresses['newship'][index][indx] : ''"
+                                                        x-bind:value="checkShipAddress ? (config.customerData.addresses['newship']?.[index]?.[indx] || '') : ''"
                                                         x-bind:data-validate="(indx == '0') ? JSON.stringify(address.validation) : []">
                                                         <div class="field-error text-base text-error mt-2" x-show="errors[index + '[' + indx + ']']" x-text="errors[index + '[' + indx + ']']"></div>
                                                     </div>

@@ -33,17 +33,32 @@ use Magento\Framework\UrlInterface;
 
 class CheckoutRedirect implements ObserverInterface
 {
+    /**
+     * @var ResponseFactory
+     */
     protected $responseFactory;
+
+    /**
+     * @var UrlInterface
+     */
     protected $url;
+
+    /**
+     * @var ScopeConfigInterface
+     */
     protected $scopeConfig;
+
+    /**
+     * @var RequestInterface
+     */
     protected $request;
 
     /**
      * Constructor method
      *
-     * @param ResponseFactory $responseFactory,
-     * @param UrlInterface $url,
-     * @param ScopeConfigInterface $scopeConfig,
+     * @param ResponseFactory $responseFactory
+     * @param UrlInterface $url
+     * @param ScopeConfigInterface $scopeConfig
      * @param RequestInterface $request
      */
     public function __construct(
@@ -59,6 +74,8 @@ class CheckoutRedirect implements ObserverInterface
     }
 
     /**
+     * Checkout redirect
+     * 
      * @param Observer $observer
      * @return void
      */
@@ -73,7 +90,7 @@ class CheckoutRedirect implements ObserverInterface
         if ($isEnabled && $action == 'checkout_index_index') {
             $customCheckoutUrl = $this->url->getUrl('onepage/checkout');
             $this->responseFactory->create()->setRedirect($customCheckoutUrl)->sendResponse();
-            exit;
+            return;
         }
     }
 }
